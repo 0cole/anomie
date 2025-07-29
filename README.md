@@ -1,2 +1,2 @@
 # anomie
-A chaos engine for Rust
+Restarting my fuzzer
