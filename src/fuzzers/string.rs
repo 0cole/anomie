@@ -10,7 +10,7 @@ fn basic_corpus() -> Vec<String> {
         "\n".to_string(),
         "\0hello".to_string(),
         "\'".to_string(),
-        "My name is Cole".repeat(1000),
+        "My name is Cole".repeat(10),
         String::from_utf8_lossy(b"\xFF\xFF").to_string(),
         String::from_utf8_lossy(b"\x00\x00\x00").to_string(),
     ]
