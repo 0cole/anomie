@@ -6,10 +6,6 @@ pub struct RawConfig {
     #[arg(short, long)]
     pub bin_path: String,
 
-    #[arg(short, long, action)]
-    // print the mutated object and stdout for each fuzz attempt
-    pub debug: bool,
-
     #[arg(long, default_value = "string")]
     pub fuzz_type: String,
 
@@ -33,7 +29,6 @@ pub enum Type {
 #[derive(Debug)]
 pub struct Config {
     pub bin_path: String,
-    pub debug: bool,
     pub max_iterations: usize,
     pub report_path: String,
     pub timeout: u64,
@@ -60,7 +55,6 @@ impl RawConfig {
         };
         Ok(Config {
             bin_path: self.bin_path.clone(),
-            debug: self.debug,
             max_iterations: self.max_iterations,
             report_path: self.report_path.clone(),
             timeout: self.timeout,

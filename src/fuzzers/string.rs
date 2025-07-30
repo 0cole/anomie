@@ -1,6 +1,7 @@
+use log::info;
 use rand::random_range;
 
-use crate::{mutate, target};
+use crate::{config, mutate, target};
 
 fn basic_corpus() -> Vec<String> {
     vec![
@@ -15,22 +16,16 @@ fn basic_corpus() -> Vec<String> {
     ]
 }
 
-pub fn fuzz_string(config: &crate::config::Config) {
+pub fn fuzz_string(config: &config::Config) {
     let corpus = basic_corpus();
     let mut input: String;
     for _ in 0..config.max_iterations {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input);
-        let result = target::run_target(
-            &config.bin_path,
-            mutated.as_bytes(),
-            config.timeout,
-            config.debug,
-        );
+        let result = target::run_target(&config.bin_path, mutated.as_bytes(), config.timeout);
         match result {
             Ok(code) if code != 0 => {
-                println!("Interesting input: {mutated}");
-                println!("{code}");
+                info!("Hit! Code {code} generated from: {mutated}");
             }
             _ => {
                 // println!("{}", result.unwrap());

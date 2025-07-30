@@ -1,5 +1,7 @@
 use std::{fs, io, path::Path};
 
+use log::debug;
+
 use crate::config::Config;
 
 pub fn create_report_dir(config: &Config) -> io::Result<()> {
@@ -8,8 +10,6 @@ pub fn create_report_dir(config: &Config) -> io::Result<()> {
     }
 
     fs::create_dir(&config.report_path)?;
-    if config.debug {
-        println!("Created report dir at {}", config.report_path);
-    }
+    debug!("Created report dir at {}", config.report_path);
     Ok(())
 }

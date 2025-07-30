@@ -1,6 +1,6 @@
-use std::io;
-
 use clap::Parser;
+use log::error;
+use std::io;
 use utils::create_report_dir;
 
 mod config;
@@ -11,8 +11,25 @@ mod target;
 mod utils;
 
 fn main() -> io::Result<()> {
-    let config = config::RawConfig::parse().validate().unwrap(); // TODO better error handling
-    create_report_dir(&config)?;
-    engine::run(config);
+    env_logger::init();
+
+    // precedence
+
+    // error!("Error");
+    // warn!("Warn");
+    // info!("Info");
+    // debug!("Debug");
+    // trace!("Trace");
+
+    match config::RawConfig::parse().validate() {
+        Ok(config) => {
+            create_report_dir(&config)?;
+            engine::run(&config);
+        }
+        Err(err) => {
+            error!("{err}");
+        }
+    }
+
     Ok(())
 }
