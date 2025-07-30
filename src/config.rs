@@ -3,21 +3,24 @@ use std::fs;
 
 #[derive(Parser, Debug)]
 pub struct RawConfig {
-    #[arg(long)]
+    #[arg(short, long)]
     pub bin_path: String,
+
+    #[arg(short, long, action)]
+    // print the mutated object and stdout for each fuzz attempt
+    pub debug: bool,
 
     #[arg(long, default_value = "string")]
     pub fuzz_type: String,
 
-    #[arg(long, default_value_t = 100)]
-    pub timeout: u64,
-
     #[arg(long, default_value_t = 1000)]
     pub max_iterations: usize,
 
-    #[arg(long, action)]
-    // print the first stdout
-    pub debug: bool,
+    #[arg(long, default_value_t = 100)]
+    pub timeout: u64,
+
+    #[arg(short, long, default_value = "./reports")]
+    pub report_path: String,
 }
 
 #[derive(Debug, Clone)]
@@ -30,10 +33,11 @@ pub enum Type {
 #[derive(Debug)]
 pub struct Config {
     pub bin_path: String,
-    pub validated_fuzz_type: Type,
     pub debug: bool,
-    pub timeout: u64,
     pub max_iterations: usize,
+    pub report_path: String,
+    pub timeout: u64,
+    pub validated_fuzz_type: Type,
 }
 
 impl RawConfig {
@@ -56,10 +60,11 @@ impl RawConfig {
         };
         Ok(Config {
             bin_path: self.bin_path.clone(),
-            validated_fuzz_type,
             debug: self.debug,
-            timeout: self.timeout,
             max_iterations: self.max_iterations,
+            report_path: self.report_path.clone(),
+            timeout: self.timeout,
+            validated_fuzz_type,
         })
     }
 }
