@@ -3,6 +3,7 @@ use log::error;
 use std::io;
 use utils::create_report_dir;
 
+mod analysis;
 mod config;
 mod engine;
 mod errors;
@@ -23,8 +24,8 @@ fn main() -> io::Result<()> {
     // trace!("Trace");
 
     match config::RawConfig::parse().validate() {
-        Ok(config) => {
-            create_report_dir(&config)?;
+        Ok(mut config) => {
+            create_report_dir(&mut config)?;
             engine::run(&config);
         }
         Err(err) => {

@@ -9,6 +9,3 @@ pub fn run(config: &Config) {
         _ => error!("Unsupported fuzzing type"),
     }
 }
-
-// TODO maybe should use a generic here rather than string
-pub fn record_behavior(input: String, config: &Config) {}
