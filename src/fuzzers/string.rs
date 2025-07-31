@@ -3,7 +3,7 @@ use rand::random_range;
 
 use crate::{
     config,
-    errors::{ExitStatus, SIGSEGV},
+    errors::{self, ExitStatus},
     mutate,
     target::{self},
 };
@@ -34,7 +34,12 @@ pub fn fuzz_string(config: &config::Config) {
                 debug!("Process exited gracefully with code {code}");
             }
             ExitStatus::Signal(sig) => match sig {
-                SIGSEGV => info!("Hit! Process segfaulted"),
+                errors::SIGILL => info!("Hit! Process encountered an illegal instruction"),
+                errors::SIGABRT => info!("Hit! Process executed the abort function"),
+                errors::SIGFPE => info!("Hit! Process encountered a floating point exception"),
+                errors::SIGSEGV => info!("Hit! Process encountered a segmentation fault"),
+                errors::SIGPIPE => info!("Hit! Process encountered a pipe error"),
+                errors::SIGTERM => info!("Hit! Process was terminated"),
                 _ => info!("Hit! Process crashed with unknown signal {sig}"),
             },
             // ExitStatus::Timeout => {
