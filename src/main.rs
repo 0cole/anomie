@@ -5,6 +5,7 @@ use utils::create_report_dir;
 
 mod config;
 mod engine;
+mod errors;
 mod fuzzers;
 mod mutate;
 mod target;

@@ -1,6 +1,7 @@
+use log::error;
+
 use crate::config::Config;
 use crate::fuzzers;
-use log::error;
 
 pub fn run(config: &Config) {
     match config.validated_fuzz_type {

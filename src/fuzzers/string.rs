@@ -1,7 +1,12 @@
-use log::info;
+use log::{debug, info};
 use rand::random_range;
 
-use crate::{config, mutate, target};
+use crate::{
+    config,
+    errors::{ExitStatus, SIGSEGV},
+    mutate,
+    target::{self},
+};
 
 fn basic_corpus() -> Vec<String> {
     vec![
@@ -22,17 +27,21 @@ pub fn fuzz_string(config: &config::Config) {
     for _ in 0..config.max_iterations {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input);
-        let result = target::run_target(&config.bin_path, mutated.as_bytes(), config.timeout);
+        let result = target::run_target(&config.bin_path, mutated.as_bytes(), config.timeout)
+            .unwrap_or(ExitStatus::ExitCode(0));
         match result {
-            Ok(code) if code != 0 => {
-                if code == <i32>::MIN {
-                    info!("Hit! Returned no return code from: {mutated}");
-                } else {
-                    info!("Hit! Code {code} generated from: {mutated}");
-                }
+            ExitStatus::ExitCode(code) => {
+                debug!("Process exited gracefully with code {code}");
             }
-            _ => {
-                // println!("{}", result.unwrap());
+            ExitStatus::Signal(sig) => match sig {
+                SIGSEGV => info!("Hit! Process segfaulted"),
+                _ => info!("Hit! Process crashed with unknown signal {sig}"),
+            },
+            // ExitStatus::Timeout => {
+            //     info!("Hit! Process timed out");
+            // }
+            ExitStatus::Error(msg) => {
+                info!("Hit! Process execution error: {msg}");
             }
         }
         // input = mutated;

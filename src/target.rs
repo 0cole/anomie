@@ -1,8 +1,11 @@
-use std::process::{Command, Stdio};
-
+use crate::errors::ExitStatus;
 use log::debug;
+use std::{
+    os::unix::process::ExitStatusExt,
+    process::{Command, Stdio},
+};
 
-pub fn run_target(path: &str, input: &[u8], _timeout_ms: u64) -> std::io::Result<i32> {
+pub fn run_target(path: &str, input: &[u8], _timeout_ms: u64) -> std::io::Result<ExitStatus> {
     let input_args = input
         .split(|&b| b == b' ') // use a space to delimit the args
         .map(|s| String::from_utf8_lossy(s).into_owned())
@@ -23,12 +26,23 @@ pub fn run_target(path: &str, input: &[u8], _timeout_ms: u64) -> std::io::Result
         .stderr(Stdio::piped())
         .output()?;
 
+    let status = output.status;
+
     debug!(
-        "STATUS: {:?}\nSTDOUT returned: {:?}\nSTDERR returned: {:?}",
-        &output.status.code(),
+        "Code: {:?} (SIG {:?})\nSTDOUT returned: {:?}\nSTDERR returned: {:?}",
+        status.code(),
+        status.signal().unwrap_or(0),
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 
-    Ok(output.status.code().unwrap_or(<i32>::MIN))
+    let exit_status = if let Some(sig) = status.signal() {
+        ExitStatus::Signal(sig)
+    } else if let Some(code) = status.code() {
+        ExitStatus::ExitCode(code)
+    } else {
+        ExitStatus::Error("Unknown termination".into())
+    };
+
+    Ok(exit_status)
 }

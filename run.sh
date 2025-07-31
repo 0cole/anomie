@@ -1,8 +1,8 @@
 #!/bin/bash
 
-binary_path="fuzzing_targets/tools/bin/utf8"
+binary_path="fuzzing_targets/command-line_tools/ls"
 fuzz_type="string"
-max_iterations="1000"
+max_iterations="100000"
 timeout="100"
 
 if [ -z "$1" ]; then
