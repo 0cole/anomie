@@ -25,7 +25,11 @@ pub fn fuzz_string(config: &config::Config) {
         let result = target::run_target(&config.bin_path, mutated.as_bytes(), config.timeout);
         match result {
             Ok(code) if code != 0 => {
-                info!("Hit! Code {code} generated from: {mutated}");
+                if code == <i32>::MIN {
+                    info!("Hit! Returned no return code from: {mutated}");
+                } else {
+                    info!("Hit! Code {code} generated from: {mutated}");
+                }
             }
             _ => {
                 // println!("{}", result.unwrap());
