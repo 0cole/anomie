@@ -1,6 +1,5 @@
-use rand::random_range;
-
 use crate::{analysis::analyze_result, config, errors::ExitStatus, mutate, target};
+use rand::random_range;
 
 fn basic_corpus() -> Vec<String> {
     vec![
