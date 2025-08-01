@@ -39,3 +39,35 @@ pub fn mutate_string(s: &str) -> String {
     }
     m
 }
+
+pub fn mutate_bytes(bytes: &mut [u8]) {
+    let mut rng = rng();
+
+    for _ in 0..10 {
+        let index = rng.random_range(0..bytes.len());
+        match rng.random_range(0..4) {
+            0 => {
+                // bitmask mutation
+                let mask: u8 = rng.random();
+                bytes[index] ^= mask;
+            }
+            1 => {
+                // bit flip
+                let bit_index = rng.random_range(0..8);
+                let mutated_byte = bytes[index] ^ (1 << bit_index);
+                bytes[index] = mutated_byte;
+            }
+            2 => {
+                // byte insertion
+                let new_byte: u8 = rng.random();
+                bytes[index..].rotate_right(1);
+                bytes[index] = new_byte;
+            }
+            3 => {
+                // byte shift
+                bytes.rotate_left(1);
+            }
+            _ => {}
+        }
+    }
+}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 binary_path="fuzzing_targets/command-line_tools/ls"
-fuzz_type="string"
+fuzz_type="txt"
 max_iterations="1000"
 timeout="100"
 
