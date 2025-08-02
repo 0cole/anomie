@@ -39,12 +39,10 @@ pub struct Config {
 impl RawConfig {
     pub fn validate(&self) -> Result<Config, &'static str> {
         // validate the binary passed in
-        let metadata = fs::metadata(&self.bin_path).map_err(
-            |_| "invalid binary path, make sure the binary is in the root dir of anomie",
-        )?;
+        let metadata = fs::metadata(&self.bin_path)
+            .map_err(|_| "invalid binary path, double check the path exists")?;
         if !metadata.is_file() {
-            dbg!(&self.bin_path);
-            return Err("path does not correspond to an actual binary");
+            return Err("path does not correspond to a binary");
         }
 
         // validate the type passed in
@@ -55,6 +53,7 @@ impl RawConfig {
             "unsignedint" | "uint" => Type::UnsignedInt,
             _ => return Err("invalid fuzz type"),
         };
+
         Ok(Config {
             bin_path: self.bin_path.clone(),
             max_iterations: self.max_iterations,

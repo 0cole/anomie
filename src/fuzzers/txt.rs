@@ -25,6 +25,8 @@ fn generate_txt_corpus(corpus_dir: &str) {
 }
 
 pub fn fuzz_txt(config: &config::Config) {
+    info!("Beginning txt fuzzing");
+
     let mut rng = rand::rng();
 
     // create the corpus dir to store our basic txt files

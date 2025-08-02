@@ -1,7 +1,6 @@
 use clap::Parser;
-use log::error;
+use log::{error, info};
 use std::io;
-use utils::create_report_dir;
 
 mod analysis;
 mod config;
@@ -25,11 +24,12 @@ fn main() -> io::Result<()> {
 
     match config::RawConfig::parse().validate() {
         Ok(mut config) => {
-            create_report_dir(&mut config)?;
+            info!("Parsed config successfully");
+            utils::create_report_dir(&mut config)?;
             engine::run(&config);
         }
         Err(err) => {
-            error!("{err}");
+            error!("Error when parsing config: {err}");
         }
     }
 

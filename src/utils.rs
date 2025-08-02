@@ -1,5 +1,5 @@
 use crate::config::Config;
-use log::debug;
+use log::{debug, info};
 use std::{fs, io, path::Path};
 
 pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
@@ -36,6 +36,10 @@ pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
     fs::create_dir(new_dir_path.clone() + "/SIGTERM")?;
 
     // update the subdir num in config
+    info!(
+        "Any crashes will be recorded and stored in {:?}",
+        &new_dir_path
+    );
     config.report_path = new_dir_path;
 
     Ok(())

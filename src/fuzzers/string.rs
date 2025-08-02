@@ -1,4 +1,5 @@
 use crate::{analysis::analyze_result, config, errors::ExitStatus, mutate, target};
+use log::info;
 use rand::random_range;
 
 fn basic_corpus() -> Vec<String> {
@@ -15,8 +16,11 @@ fn basic_corpus() -> Vec<String> {
 }
 
 pub fn fuzz_string(config: &config::Config) {
+    info!("Beginning string fuzzing");
+
     let corpus = basic_corpus();
     let mut input: String;
+
     for id in 0..config.max_iterations {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input);
