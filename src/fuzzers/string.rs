@@ -24,8 +24,9 @@ pub fn fuzz_string(config: &config::Config) {
     for id in 0..config.max_iterations {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input);
-        let result = target::run_target(&config.bin_path, mutated.as_bytes(), config.timeout)
-            .unwrap_or(ExitStatus::ExitCode(0));
+        let result =
+            target::run_target_string(&config.bin_path, mutated.as_bytes(), config.timeout)
+                .unwrap_or(ExitStatus::ExitCode(0));
         analyze_result(&config.report_path, result, id, mutated.as_bytes());
         // input = mutated;
     }

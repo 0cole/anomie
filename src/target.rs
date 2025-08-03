@@ -1,11 +1,59 @@
 use crate::errors::ExitStatus;
 use log::debug;
 use std::{
+    io,
     os::unix::process::ExitStatusExt,
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
 };
 
-pub fn run_target(path: &str, input: &[u8], _timeout_ms: u64) -> std::io::Result<ExitStatus> {
+fn assess_output(output: &Output) -> ExitStatus {
+    let status = output.status;
+
+    debug!(
+        "Code: {:?} (SIG {:?})\nSTDOUT returned: {:?}\nSTDERR returned: {:?}",
+        status.code(),
+        status.signal().unwrap_or(0),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    if let Some(sig) = status.signal() {
+        ExitStatus::Signal(sig)
+    } else if let Some(code) = status.code() {
+        ExitStatus::ExitCode(code)
+    } else {
+        ExitStatus::Error("Unknown termination".into())
+    }
+}
+
+pub fn run_target_file(
+    binary_path: &str,
+    file_path: &str,
+    args: Option<&'static str>,
+) -> io::Result<ExitStatus> {
+    let mut input_args: Vec<&str> = if let Some(s) = args {
+        s.split(' ').collect()
+    } else {
+        vec![]
+    };
+
+    // TODO hardcoding file_path to the end of flags
+    input_args.push(file_path);
+
+    let coalesced_args = input_args.join(" ");
+    debug!("Running: {coalesced_args} on {binary_path}");
+
+    let output = Command::new(binary_path)
+        .args(input_args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()?;
+
+    let exit_status = assess_output(&output);
+    Ok(exit_status)
+}
+
+pub fn run_target_string(path: &str, input: &[u8], _timeout_ms: u64) -> io::Result<ExitStatus> {
     let input_args = input
         .split(|&b| b == b' ') // use a space to delimit the args
         .map(|s| String::from_utf8_lossy(s).into_owned())
@@ -26,23 +74,6 @@ pub fn run_target(path: &str, input: &[u8], _timeout_ms: u64) -> std::io::Result
         .stderr(Stdio::piped())
         .output()?;
 
-    let status = output.status;
-
-    debug!(
-        "Code: {:?} (SIG {:?})\nSTDOUT returned: {:?}\nSTDERR returned: {:?}",
-        status.code(),
-        status.signal().unwrap_or(0),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let exit_status = if let Some(sig) = status.signal() {
-        ExitStatus::Signal(sig)
-    } else if let Some(code) = status.code() {
-        ExitStatus::ExitCode(code)
-    } else {
-        ExitStatus::Error("Unknown termination".into())
-    };
-
+    let exit_status = assess_output(&output);
     Ok(exit_status)
 }

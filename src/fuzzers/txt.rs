@@ -1,4 +1,7 @@
-use crate::{config, mutate::mutate_bytes};
+use crate::{
+    analysis::analyze_result, config, errors::ExitStatus, mutate::mutate_bytes,
+    target::run_target_file,
+};
 use log::info;
 use rand::Rng;
 use std::{fs, io::Write};
@@ -42,8 +45,12 @@ pub fn fuzz_txt(config: &config::Config) {
         // apply mutations to file
         let mut bytes = fs::read(file).unwrap();
         mutate_bytes(&mut bytes);
-
-        // write new mutated file
         fs::write("mutated.txt", &bytes).unwrap();
+
+        // TODO add arg functionality
+        let result = run_target_file(&config.bin_path, "mutated.txt", None)
+            .unwrap_or(ExitStatus::ExitCode(0));
+        let bytes = fs::read("mutated.txt").unwrap();
+        analyze_result(&config.report_path, result, id, &bytes);
     }
 }

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-binary_path="fuzzing_targets/command-line_tools/ls"
+binary_path="fuzzing_targets/Huffman-Code/huffman-code/huffman"
 fuzz_type="txt"
-max_iterations="1000"
+max_iterations="100000"
 timeout="100"
 
 if [ -z "$1" ]; then
