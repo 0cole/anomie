@@ -1,2 +1,2 @@
 # anomie
-Restarting my fuzzer
+I'm currently restarting my [fuzzer](https://github.com/0cole/fuzz) that I designed earlier this year. This time, I am using better design conventions and improved the format significantly to make adding new file types easier and its usage more straightforward.
