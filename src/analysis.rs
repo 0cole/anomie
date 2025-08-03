@@ -21,36 +21,19 @@ pub fn analyze_result(report_path: &str, result: ExitStatus, crash_id: usize, in
         ExitStatus::ExitCode(code) => {
             debug!("Process exited gracefully with code {code}");
         }
-        ExitStatus::Signal(sig) => match sig {
-            errors::SIGILL => {
-                info!("Hit! Process encountered an illegal instruction");
-                save_crash(report_path, crash_id, input, "SIGILL").unwrap();
-            }
-            errors::SIGABRT => {
-                info!("Hit! Process executed the abort function");
-                save_crash(report_path, crash_id, input, "SIGABRT").unwrap();
-            }
-            errors::SIGFPE => {
-                info!("Hit! Process encountered a floating point exception");
-                save_crash(report_path, crash_id, input, "SIGFPE").unwrap();
-            }
-            errors::SIGSEGV => {
-                info!("Hit! Process encountered a segmentation fault");
-                save_crash(report_path, crash_id, input, "SIGSEGV").unwrap();
-            }
-            errors::SIGPIPE => {
-                info!("Hit! Process encountered a pipe error");
-                save_crash(report_path, crash_id, input, "SIGPIPE").unwrap();
-            }
-            errors::SIGTERM => {
-                info!("Hit! Process was terminated");
-                save_crash(report_path, crash_id, input, "SIGTERM").unwrap();
-            }
-            _ => {
-                info!("Hit! Process crashed with unknown signal {sig}");
-                save_crash(report_path, crash_id, input, "UKNOWN").unwrap();
-            }
-        },
+        ExitStatus::Signal(sig) => {
+            let (signal_desc, signal) = match sig {
+                errors::SIGILL => ("illegal instruction", "SIGILL"),
+                errors::SIGABRT => ("abort function", "SIGABRT"),
+                errors::SIGFPE => ("floating point exception", "SIGFPE"),
+                errors::SIGSEGV => ("segmentation fault", "SIGSEGV"),
+                errors::SIGPIPE => ("pipe error", "SIGPIPE"),
+                errors::SIGTERM => ("termination error", "SIGTERM"),
+                _ => ("unknown error", "UNKNOWN"),
+            };
+            info!("Hit! Process crashed due to a {signal_desc} error ({signal})");
+            save_crash(report_path, crash_id, input, signal).unwrap();
+        }
         // ExitStatus::Timeout => {
         //     info!("Hit! Process timed out");
         // }
