@@ -1,6 +1,6 @@
 use crate::{
     analysis::analyze_result, config, errors::ExitStatus, mutate::mutate_bytes,
-    target::run_target_file,
+    target::run_target_file, types::StructuredInput,
 };
 use log::info;
 use rand::Rng;
@@ -41,6 +41,7 @@ pub fn fuzz_txt(config: &config::Config) {
     let mut bin_args_plus_file = config.bin_args.clone();
     bin_args_plus_file.push("mutated.txt".to_string());
 
+    let mutated_file_name = "mutated.txt";
     for id in 0..config.max_iterations {
         // pick a random file from our corpus
         let file_num = rng.random_range(0..CORPUS_SIZE);
@@ -49,12 +50,13 @@ pub fn fuzz_txt(config: &config::Config) {
         // apply mutations to file
         let mut bytes = fs::read(file).unwrap();
         mutate_bytes(&mut bytes);
-        fs::write("mutated.txt", &bytes).unwrap();
+        fs::write(mutated_file_name, &bytes).unwrap();
 
         // TODO add arg functionality
         let result = run_target_file(&bin_args_plus_file, &config.bin_path)
             .unwrap_or(ExitStatus::ExitCode(0));
-        let bytes = fs::read("mutated.txt").unwrap();
-        analyze_result(&config.report_path, result, id, &bytes);
+        let structured_input =
+            StructuredInput::FileInput(mutated_file_name.to_string(), "txt".to_string());
+        analyze_result(&config.report_path, result, id, structured_input);
     }
 }

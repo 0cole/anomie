@@ -1,4 +1,6 @@
-use crate::{analysis::analyze_result, config, errors::ExitStatus, mutate, target};
+use crate::{
+    analysis::analyze_result, config, errors::ExitStatus, mutate, target, types::StructuredInput,
+};
 use log::info;
 use rand::random_range;
 
@@ -23,11 +25,11 @@ pub fn fuzz_string(config: &config::Config) {
 
     for id in 0..config.max_iterations {
         input = corpus[random_range(..corpus.len())].clone();
-        let mutated = mutate::mutate_string(&input);
-        let result =
-            target::run_target_string(&config.bin_path, &config.bin_args, mutated.as_bytes())
-                .unwrap_or(ExitStatus::ExitCode(0));
-        analyze_result(&config.report_path, result, id, mutated.as_bytes());
+        let mutated = mutate::mutate_string(&input).into_bytes();
+        let structured_input = StructuredInput::StringInput(mutated.clone());
+        let result = target::run_target_string(&config.bin_path, &config.bin_args, &mutated)
+            .unwrap_or(ExitStatus::ExitCode(0));
+        analyze_result(&config.report_path, result, id, structured_input);
         // input = mutated;
     }
 }

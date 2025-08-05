@@ -9,6 +9,7 @@ mod errors;
 mod fuzzers;
 mod mutate;
 mod target;
+mod types;
 mod utils;
 
 fn main() -> io::Result<()> {

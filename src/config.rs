@@ -24,7 +24,7 @@ pub struct RawConfig {
 }
 
 #[derive(Debug, Clone)]
-pub enum Type {
+pub enum FuzzType {
     String,
     Txt,
     SignedInt,
@@ -38,7 +38,7 @@ pub struct Config {
     pub max_iterations: usize,
     pub report_path: String,
     pub timeout: u64,
-    pub validated_fuzz_type: Type,
+    pub validated_fuzz_type: FuzzType,
 }
 
 impl RawConfig {
@@ -52,10 +52,10 @@ impl RawConfig {
 
         // validate the type passed in
         let validated_fuzz_type = match self.fuzz_type.to_lowercase().as_str() {
-            "string" => Type::String,
-            "txt" => Type::Txt,
-            "signedint" | "int" => Type::SignedInt,
-            "unsignedint" | "uint" => Type::UnsignedInt,
+            "string" => FuzzType::String,
+            "txt" => FuzzType::Txt,
+            "signedint" | "int" => FuzzType::SignedInt,
+            "unsignedint" | "uint" => FuzzType::UnsignedInt,
             _ => return Err("invalid fuzz type"),
         };
 
