@@ -1,8 +1,8 @@
 #!/bin/bash
 
-binary_path="fuzzing_targets/Huffman-Code/huffman-code/huffman"
-fuzz_type="txt"
-args="-c"
+binary_path="fuzzing_targets/command-line_tools/ls"
+fuzz_type="string"
+args="-afi"
 max_iterations="100"
 timeout="100"
 

@@ -40,11 +40,18 @@ pub fn run_target_file(binary_args: &[String], binary_path: &str) -> io::Result<
     Ok(exit_status)
 }
 
-pub fn run_target_string(path: &str, input: &[u8], _timeout_ms: u64) -> io::Result<ExitStatus> {
-    let input_args = input
+pub fn run_target_string(
+    binary_path: &str,
+    binary_args: &[String],
+    fuzz_input: &[u8],
+) -> io::Result<ExitStatus> {
+    // TODO make binary_args a vector rather than just &[String]
+    let mut input_args: Vec<String> = binary_args.to_vec();
+    let fuzz_string_delim: &[String] = &fuzz_input
         .split(|&b| b == b' ') // use a space to delimit the args
         .map(|s| String::from_utf8_lossy(s).into_owned())
         .collect::<Vec<String>>();
+    input_args.extend_from_slice(fuzz_string_delim);
 
     let coalesced_args = input_args.join(" ");
     // Print the full command being executed for debug
@@ -55,7 +62,7 @@ pub fn run_target_string(path: &str, input: &[u8], _timeout_ms: u64) -> io::Resu
         debug!("Running: {coalesced_args}");
     }
 
-    let output = Command::new(path)
+    let output = Command::new(binary_path)
         .args(input_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
