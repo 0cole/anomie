@@ -26,25 +26,12 @@ fn assess_output(output: &Output) -> ExitStatus {
     }
 }
 
-pub fn run_target_file(
-    binary_path: &str,
-    file_path: &str,
-    args: Option<&'static str>,
-) -> io::Result<ExitStatus> {
-    let mut input_args: Vec<&str> = if let Some(s) = args {
-        s.split(' ').collect()
-    } else {
-        vec![]
-    };
-
-    // TODO hardcoding file_path to the end of flags
-    input_args.push(file_path);
-
-    let coalesced_args = input_args.join(" ");
+pub fn run_target_file(binary_args: &[String], binary_path: &str) -> io::Result<ExitStatus> {
+    let coalesced_args = binary_args.join(" ");
     debug!("Running: {coalesced_args} on {binary_path}");
 
     let output = Command::new(binary_path)
-        .args(input_args)
+        .args(binary_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()?;

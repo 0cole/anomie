@@ -2,7 +2,8 @@
 
 binary_path="fuzzing_targets/Huffman-Code/huffman-code/huffman"
 fuzz_type="txt"
-max_iterations="100000"
+args="-c"
+max_iterations="100"
 timeout="100"
 
 if [ -z "$1" ]; then
@@ -19,6 +20,6 @@ elif [ "$1" == "error" ]; then
 	log_type="error"
 fi
 
-echo "RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --max-iterations $max_iterations --timeout $timeout"
+echo "RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --max-iterations $max_iterations --timeout $timeout --\"$args\""
 
-RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --max-iterations $max_iterations --timeout $timeout
+RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --max-iterations $max_iterations --timeout $timeout -- "$args"

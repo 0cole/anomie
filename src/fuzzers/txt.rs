@@ -37,6 +37,10 @@ pub fn fuzz_txt(config: &config::Config) {
     generate_txt_corpus(corpus_txt_dir);
     fs::create_dir_all(corpus_txt_dir).unwrap();
 
+    // setup the args
+    let mut bin_args_plus_file = config.bin_args.clone();
+    bin_args_plus_file.push("mutated.txt".to_string());
+
     for id in 0..config.max_iterations {
         // pick a random file from our corpus
         let file_num = rng.random_range(0..CORPUS_SIZE);
@@ -48,7 +52,7 @@ pub fn fuzz_txt(config: &config::Config) {
         fs::write("mutated.txt", &bytes).unwrap();
 
         // TODO add arg functionality
-        let result = run_target_file(&config.bin_path, "mutated.txt", None)
+        let result = run_target_file(&bin_args_plus_file, &config.bin_path)
             .unwrap_or(ExitStatus::ExitCode(0));
         let bytes = fs::read("mutated.txt").unwrap();
         analyze_result(&config.report_path, result, id, &bytes);

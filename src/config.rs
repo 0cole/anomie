@@ -17,6 +17,10 @@ pub struct RawConfig {
 
     #[arg(short, long, default_value = "./reports")]
     pub report_path: String,
+
+    // everything after is part of args
+    #[arg(last = true)]
+    pub bin_args: String,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +33,7 @@ pub enum Type {
 
 #[derive(Debug)]
 pub struct Config {
+    pub bin_args: Vec<String>,
     pub bin_path: String,
     pub max_iterations: usize,
     pub report_path: String,
@@ -54,7 +59,11 @@ impl RawConfig {
             _ => return Err("invalid fuzz type"),
         };
 
+        // parse the args and format them as a vector
+        let bin_args: Vec<String> = self.bin_args.split(' ').map(String::from).collect();
+
         Ok(Config {
+            bin_args,
             bin_path: self.bin_path.clone(),
             max_iterations: self.max_iterations,
             report_path: self.report_path.clone(),
