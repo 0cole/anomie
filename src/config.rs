@@ -1,6 +1,8 @@
 use clap::Parser;
 use std::fs;
 
+use crate::types::{Config, FuzzType};
+
 #[derive(Parser, Debug)]
 pub struct RawConfig {
     #[arg(short, long)]
@@ -23,24 +25,6 @@ pub struct RawConfig {
     pub bin_args: String,
 }
 
-#[derive(Debug, Clone)]
-pub enum FuzzType {
-    String,
-    Txt,
-    SignedInt,
-    UnsignedInt,
-}
-
-#[derive(Debug)]
-pub struct Config {
-    pub bin_args: Vec<String>,
-    pub bin_path: String,
-    pub max_iterations: usize,
-    pub report_path: String,
-    pub timeout: u64,
-    pub validated_fuzz_type: FuzzType,
-}
-
 impl RawConfig {
     pub fn validate(&self) -> Result<Config, &'static str> {
         // validate the binary passed in
@@ -56,6 +40,9 @@ impl RawConfig {
             "txt" => FuzzType::Txt,
             "signedint" | "int" => FuzzType::SignedInt,
             "unsignedint" | "uint" => FuzzType::UnsignedInt,
+            "jpeg" | "jpg" => FuzzType::Jpeg,
+            "png" => FuzzType::Png,
+            "pdf" => FuzzType::Pdf,
             _ => return Err("invalid fuzz type"),
         };
 

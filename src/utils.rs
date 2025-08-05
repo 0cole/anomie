@@ -1,6 +1,7 @@
-use crate::config::Config;
 use log::{debug, info};
 use std::{fs, io, path::Path};
+
+use crate::types::Config;
 
 pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
     if !Path::new(&config.report_path).exists() {

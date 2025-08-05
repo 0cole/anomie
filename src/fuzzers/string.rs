@@ -1,5 +1,8 @@
 use crate::{
-    analysis::analyze_result, config, errors::ExitStatus, mutate, target, types::StructuredInput,
+    analysis::analyze_result,
+    errors::ExitStatus,
+    mutate, target,
+    types::{Config, StructuredInput},
 };
 use log::info;
 use rand::random_range;
@@ -17,7 +20,7 @@ fn basic_corpus() -> Vec<String> {
     ]
 }
 
-pub fn fuzz_string(config: &config::Config) {
+pub fn fuzz_string(config: &Config) {
     info!("Beginning string fuzzing");
 
     let corpus = basic_corpus();

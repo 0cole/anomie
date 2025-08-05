@@ -1,6 +1,9 @@
 use crate::{
-    analysis::analyze_result, config, errors::ExitStatus, mutate::mutate_bytes,
-    target::run_target_file, types::StructuredInput,
+    analysis::analyze_result,
+    errors::ExitStatus,
+    mutate::mutate_bytes,
+    target::run_target_file,
+    types::{Config, StructuredInput},
 };
 use log::info;
 use rand::Rng;
@@ -27,7 +30,7 @@ fn generate_txt_corpus(corpus_dir: &str) {
     info!("Generated corpus files in {corpus_dir}");
 }
 
-pub fn fuzz_txt(config: &config::Config) {
+pub fn fuzz_txt(config: &Config) {
     info!("Beginning txt fuzzing");
 
     let mut rng = rand::rng();
