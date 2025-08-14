@@ -6,14 +6,12 @@ use crate::{
     types::{Config, StructuredInput},
 };
 use log::info;
-use rand::Rng;
+use rand::{Rng, rngs::ThreadRng};
 use std::{fs, io::Write};
 
 const CORPUS_SIZE: usize = 20;
 
-fn generate_txt_corpus(corpus_dir: &str) {
-    let mut rng = rand::rng();
-
+fn generate_txt_corpus(mut rng: ThreadRng, corpus_dir: &str) {
     // generate CORPUS_SIZE random txt files
     for i in 0..CORPUS_SIZE {
         let mut content = Vec::new();
@@ -37,7 +35,7 @@ pub fn fuzz_txt(config: &Config) {
 
     // create the corpus dir to store our basic txt files
     let corpus_txt_dir = "corpus/txt";
-    generate_txt_corpus(corpus_txt_dir);
+    generate_txt_corpus(rng.to_owned(), corpus_txt_dir);
     fs::create_dir_all(corpus_txt_dir).unwrap();
 
     // setup the args
