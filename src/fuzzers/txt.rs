@@ -35,7 +35,7 @@ pub fn fuzz_txt(config: &Config) {
 
     // create the corpus dir to store our basic txt files
     let corpus_txt_dir = "corpus/txt";
-    generate_txt_corpus(rng.to_owned(), corpus_txt_dir);
+    generate_txt_corpus(rng.clone(), corpus_txt_dir);
     fs::create_dir_all(corpus_txt_dir).unwrap();
 
     // setup the args
