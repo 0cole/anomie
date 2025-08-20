@@ -1,5 +1,8 @@
 use log::{debug, info};
-use std::{fs, io, path::Path};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 use crate::types::Config;
 
@@ -44,4 +47,14 @@ pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
     config.report_path = new_dir_path;
 
     Ok(())
+}
+
+pub fn clean_up(dir: &str) {
+    let files: Vec<PathBuf> = fs::read_dir(dir)
+        .unwrap()
+        .filter_map(|entry| Some(entry.ok()?.path()))
+        .collect();
+    for file in files {
+        fs::remove_file(file).unwrap();
+    }
 }
