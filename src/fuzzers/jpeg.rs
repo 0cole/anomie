@@ -30,7 +30,7 @@ fn generate_corpus(mut rng: ThreadRng, corpus_dir: &str) {
     let data = default_img.into_vec();
 
     // generate different qualities, densities, 3 byte/pixel color_types, and progressive encoding
-    let color_types = vec![
+    let color_types = [
         jpeg_encoder::ColorType::Luma,
         jpeg_encoder::ColorType::Rgb,
         jpeg_encoder::ColorType::Bgr,
@@ -55,21 +55,6 @@ fn generate_corpus(mut rng: ThreadRng, corpus_dir: &str) {
         encoder.set_density(density);
         encoder
             .encode(&data, width, height, color_types[color_type_index])
-            .unwrap();
-    }
-
-    // use different pixel densities
-    for density in 0..10 {
-        let xdensity = rng.random_range(0..u16::MAX);
-        let ydensity = rng.random_range(0..u16::MAX);
-        let file_name = format!("{corpus_dir}density-({xdensity}, {ydensity}).jpg");
-        let mut density_encoder = jpeg_encoder::Encoder::new_file(file_name, 100).unwrap();
-        density_encoder.set_density(jpeg_encoder::Density::Inch {
-            x: xdensity,
-            y: ydensity,
-        });
-        density_encoder
-            .encode(&data, width, height, jpeg_encoder::ColorType::Rgb)
             .unwrap();
     }
 
