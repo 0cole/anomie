@@ -24,8 +24,8 @@ pub struct RawConfig {
     #[arg(short, long, default_value = "./reports")]
     pub report_path: String,
 
-    #[arg(short, long, default_value_t = 0)]
-    pub seed: u64,
+    #[arg(short, long)]
+    pub seed: Option<u64>,
 
     // everything after is part of args
     #[arg(last = true)]
@@ -53,8 +53,12 @@ impl RawConfig {
             _ => return Err("invalid fuzz type"),
         };
 
-        // initialize the rng
-        let rng = SmallRng::seed_from_u64(self.seed);
+        // initialize the rng if a seed is provided otherwise generate one from getrandom
+        let rng = if let Some(seed) = self.seed {
+            SmallRng::seed_from_u64(seed)
+        } else {
+            SmallRng::from_os_rng()
+        };
 
         // parse the args and format them as a vector
         let bin_args: Vec<String> = self.bin_args.split(' ').map(String::from).collect();
