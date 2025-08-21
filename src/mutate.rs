@@ -93,7 +93,7 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
             1 => {
                 // remove EOF - last 2 bytes are a flag that represent the end
                 // of the jpeg
-                fs::write(mutated_file_name, &bytes[..2])?;
+                fs::write(mutated_file_name, &bytes[..bytes.len() - 2])?;
                 debug!("removing the EOF of {}", file.display());
             }
             2 => {
@@ -124,7 +124,9 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                 }
             }
             4 => {
-                // byteflip non-header data, flip 1.5% of all non-header bytes
+                // byteflip non-header data, flip at most 2% of all non-header bytes
+                let mutation_rate = rng.random_range(0.001..0.02);
+                let total_byteflip_mutations = (bytes.len() as f64 * mutation_rate).ceil() as u64;
 
                 // first collect all header indicies
                 let mut header_indicies: HashSet<usize> = HashSet::new();
@@ -137,7 +139,6 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                 }
 
                 let mut new_bytes = bytes.clone();
-                let total_byteflip_mutations = (bytes.len() as f64 * 0.015).ceil() as u64;
                 for _ in 0..total_byteflip_mutations {
                     // skip last 2 bytes of file
                     let mut index = rng.random_range(0..bytes.len() - 3);
