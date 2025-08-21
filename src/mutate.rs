@@ -2,7 +2,10 @@ use std::{collections::HashSet, fs, io, path::PathBuf};
 
 use image::ImageReader;
 use log::{debug, info, warn};
-use rand::{Rng, random, rng, rngs::ThreadRng};
+use rand::{
+    Rng, random, rng,
+    rngs::{SmallRng, ThreadRng},
+};
 
 pub fn mutate_string(s: &str) -> String {
     let mut rng = rng();
@@ -76,7 +79,7 @@ pub fn mutate_bytes(bytes: &mut [u8]) {
     }
 }
 
-pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
+pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> io::Result<()> {
     let img = ImageReader::open(file)?.decode().unwrap();
     let bytes: Vec<u8> = fs::read(file)?;
     let mutated_file_name = "mutated.jpg";

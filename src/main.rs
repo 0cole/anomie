@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
         Ok(mut config) => {
             info!("Parsed config successfully");
             utils::create_report_dir(&mut config)?;
-            engine::run(&config);
+            engine::run(&mut config);
         }
         Err(err) => {
             error!("Error when parsing config: {err}");

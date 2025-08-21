@@ -3,8 +3,9 @@
 binary_path="fuzzing_targets/packJPG/source/packjpg"
 fuzz_type="jpg"
 args=""
-max_iterations="100"
+max_iterations="4"
 timeout="100"
+seed="0"
 
 if [ -z "$1" ]; then
   log_type="info"
@@ -20,6 +21,6 @@ elif [ "$1" == "error" ]; then
 	log_type="error"
 fi
 
-echo "RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --max-iterations $max_iterations --timeout $timeout --\"$args\""
+echo "RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --seed $seed --max-iterations $max_iterations --timeout $timeout --\"$args\""
 
-RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --max-iterations $max_iterations --timeout $timeout -- "$args"
+RUST_LOG=$log_type cargo run -- -b $binary_path --fuzz-type $fuzz_type --seed $seed --max-iterations $max_iterations --timeout $timeout -- "$args"

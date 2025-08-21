@@ -1,4 +1,8 @@
 use clap::Parser;
+use rand::{
+    SeedableRng,
+    rngs::{SmallRng, StdRng},
+};
 use std::fs;
 
 use crate::types::{Config, FuzzType};
@@ -19,6 +23,9 @@ pub struct RawConfig {
 
     #[arg(short, long, default_value = "./reports")]
     pub report_path: String,
+
+    #[arg(short, long, default_value_t = 0)]
+    pub seed: u64,
 
     // everything after is part of args
     #[arg(last = true)]
@@ -46,6 +53,9 @@ impl RawConfig {
             _ => return Err("invalid fuzz type"),
         };
 
+        // initialize the rng
+        let rng = SmallRng::seed_from_u64(self.seed);
+
         // parse the args and format them as a vector
         let bin_args: Vec<String> = self.bin_args.split(' ').map(String::from).collect();
 
@@ -54,6 +64,7 @@ impl RawConfig {
             bin_path: self.bin_path.clone(),
             max_iterations: self.max_iterations,
             report_path: self.report_path.clone(),
+            rng,
             timeout: self.timeout,
             validated_fuzz_type,
         })

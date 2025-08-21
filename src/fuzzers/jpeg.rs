@@ -1,7 +1,10 @@
 use image;
 use jpeg_encoder;
 use log::info;
-use rand::{Rng, rngs::ThreadRng};
+use rand::{
+    Rng,
+    rngs::{SmallRng, ThreadRng},
+};
 use std::{fs, path::PathBuf};
 
 use crate::{
@@ -18,7 +21,7 @@ use crate::{
     clippy::cast_precision_loss,
     clippy::cast_sign_loss
 )]
-fn generate_corpus(mut rng: ThreadRng, corpus_dir: &str) {
+fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) {
     // create a default 16x16 jpg
     let width: u16 = 16;
     let height: u16 = 16;
@@ -84,12 +87,11 @@ fn generate_corpus(mut rng: ThreadRng, corpus_dir: &str) {
     }
 }
 
-pub fn fuzz_jpeg(config: &Config) {
+pub fn fuzz_jpeg(config: &mut Config) {
     info!("Beginning jpeg fuzzing");
 
-    let mut rng = rand::rng();
     let corpus_jpeg_dir = "corpus/jpeg/";
-    generate_corpus(rng.clone(), corpus_jpeg_dir);
+    generate_corpus(&mut config.rng, corpus_jpeg_dir);
 
     // create a vec of every .jpg in the corpus dir
     let jpgs: Vec<PathBuf> = fs::read_dir(corpus_jpeg_dir)
@@ -114,9 +116,9 @@ pub fn fuzz_jpeg(config: &Config) {
     };
 
     for id in 0..config.max_iterations {
-        let file_num = rng.random_range(0..jpgs.len());
+        let file_num = config.rng.random_range(0..jpgs.len());
         let file = &jpgs[file_num];
-        mutate_jpeg(rng.clone(), file).unwrap();
+        mutate_jpeg(&mut config.rng, file).unwrap();
 
         let result = run_target_file(&args, &config.bin_path).unwrap_or(ExitStatus::ExitCode(0));
         let structured_input =

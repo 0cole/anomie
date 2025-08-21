@@ -6,12 +6,15 @@ use crate::{
     types::{Config, StructuredInput},
 };
 use log::info;
-use rand::{Rng, rngs::ThreadRng};
+use rand::{
+    Rng,
+    rngs::{SmallRng, ThreadRng},
+};
 use std::{fs, io::Write};
 
 const CORPUS_SIZE: usize = 20;
 
-fn generate_txt_corpus(mut rng: ThreadRng, corpus_dir: &str) {
+fn generate_txt_corpus(rng: &mut SmallRng, corpus_dir: &str) {
     // generate CORPUS_SIZE random txt files
     for i in 0..CORPUS_SIZE {
         let mut content = Vec::new();
@@ -28,14 +31,12 @@ fn generate_txt_corpus(mut rng: ThreadRng, corpus_dir: &str) {
     info!("Generated corpus files in {corpus_dir}");
 }
 
-pub fn fuzz_txt(config: &Config) {
+pub fn fuzz_txt(config: &mut Config) {
     info!("Beginning txt fuzzing");
-
-    let mut rng = rand::rng();
 
     // create the corpus dir to store our basic txt files
     let corpus_txt_dir = "corpus/txt";
-    generate_txt_corpus(rng.clone(), corpus_txt_dir);
+    generate_txt_corpus(&mut config.rng, corpus_txt_dir);
     fs::create_dir_all(corpus_txt_dir).unwrap();
 
     // setup the args
@@ -45,7 +46,7 @@ pub fn fuzz_txt(config: &Config) {
     let mutated_file_name = "mutated.txt";
     for id in 0..config.max_iterations {
         // pick a random file from our corpus
-        let file_num = rng.random_range(0..CORPUS_SIZE);
+        let file_num = config.rng.random_range(0..CORPUS_SIZE);
         let file = format!("{corpus_txt_dir}/{file_num}.txt");
 
         // apply mutations to file

@@ -1,3 +1,5 @@
+use rand::rngs::SmallRng;
+
 // Fuzzer global config, this is the struct used after input validation
 // (eg. verifying the binary exists, making sure the FuzzType is valid)
 #[derive(Debug)]
@@ -6,6 +8,7 @@ pub struct Config {
     pub bin_path: String,
     pub max_iterations: usize,
     pub report_path: String,
+    pub rng: SmallRng,
     pub timeout: u64,
     pub validated_fuzz_type: FuzzType,
 }
