@@ -139,7 +139,8 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                 let mut new_bytes = bytes.clone();
                 let total_byteflip_mutations = (bytes.len() as f64 * 0.015).ceil() as u64;
                 for _ in 0..total_byteflip_mutations {
-                    let mut index = rng.random_range(0..bytes.len() - 1);
+                    // skip last 2 bytes of file
+                    let mut index = rng.random_range(0..bytes.len() - 3);
                     while header_indicies.contains(&index) {
                         index += 1;
                     }
