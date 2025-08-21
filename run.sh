@@ -1,9 +1,9 @@
 #!/bin/bash
 
-binary_path="fuzzing_targets/Huffman-Code/huffman-code/huffman"
+binary_path="fuzzing_targets/packJPG/source/packjpg"
 fuzz_type="jpg"
-args="-c"
-max_iterations="4"
+args=""
+max_iterations="100"
 timeout="100"
 
 if [ -z "$1" ]; then

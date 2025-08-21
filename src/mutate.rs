@@ -81,7 +81,7 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
     let bytes: Vec<u8> = fs::read(file)?;
     let mutated_file_name = "mutated.jpg";
 
-    let total_mutations = rng.random_range(0..3);
+    let total_mutations = rng.random_range(0..2);
     for _ in 0..total_mutations {
         match rng.random_range(0..5) {
             0 => {

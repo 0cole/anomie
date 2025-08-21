@@ -4,7 +4,14 @@ use log::info;
 use rand::{Rng, rngs::ThreadRng};
 use std::{fs, path::PathBuf};
 
-use crate::{mutate::mutate_jpeg, types::Config, utils::clean_up};
+use crate::{
+    analysis::analyze_result,
+    errors::ExitStatus,
+    mutate::mutate_jpeg,
+    target::run_target_file,
+    types::{Config, StructuredInput},
+    utils::clean_up,
+};
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -97,17 +104,25 @@ pub fn fuzz_jpeg(config: &Config) {
         })
         .collect();
 
-    let mutated_file = "mutated.txt";
-    let mut bin_args_plus_file = config.bin_args.clone();
-    bin_args_plus_file.push(mutated_file.to_string());
+    let mutated_file = "mutated.jpg";
+    let args: Vec<String> = if config.bin_args == [""] {
+        vec![mutated_file.to_string()]
+    } else {
+        let mut v = config.bin_args.clone();
+        v.push(mutated_file.to_string());
+        v
+    };
 
     for id in 0..config.max_iterations {
         let file_num = rng.random_range(0..jpgs.len());
         let file = &jpgs[file_num];
         mutate_jpeg(rng.clone(), file).unwrap();
+
+        let result = run_target_file(&args, &config.bin_path).unwrap_or(ExitStatus::ExitCode(0));
+        let structured_input =
+            StructuredInput::FileInput(mutated_file.to_string(), "jpg".to_string());
+        analyze_result(&config.report_path, result, id, structured_input);
     }
 
-    clean_up(corpus_jpeg_dir, "jpg");
-
-    todo!()
+    // clean_up(corpus_jpeg_dir, "jpg");
 }
