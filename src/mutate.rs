@@ -83,11 +83,11 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
 
     let total_mutations = rng.random_range(0..2);
     for _ in 0..total_mutations {
+        let mut mutated = bytes.clone();
         match rng.random_range(0..5) {
             0 => {
                 // truncate the middle
-                let midpoint = bytes.len() / 2;
-                fs::write(mutated_file_name, &bytes[..midpoint])?;
+                fs::write(mutated_file_name, &bytes[..bytes.len() / 2])?;
                 debug!("truncating {} at its midpoint", file.display());
             }
             1 => {
@@ -98,10 +98,9 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
             }
             2 => {
                 // corrupt SOI - replace the traditional jpeg start flag with a random byte
-                let mut new_bytes = bytes.clone();
                 let rand_byte = rng.random::<u8>();
-                new_bytes[1] = rand_byte;
-                fs::write(mutated_file_name, &new_bytes)?;
+                mutated[1] = rand_byte;
+                fs::write(mutated_file_name, &mutated)?;
                 debug!("corrupted the SOI of {}", file.display());
             }
             3 => {
@@ -112,12 +111,11 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                     .windows(2)
                     .position(|w| w == [0xFF, 0xC0] || w == [0xFF, 0xC2])
                 {
-                    let mut new_bytes = bytes.clone();
-                    new_bytes[sof_start_index + 5] = random::<u8>();
-                    new_bytes[sof_start_index + 6] = random::<u8>();
-                    new_bytes[sof_start_index + 7] = random::<u8>();
-                    new_bytes[sof_start_index + 8] = random::<u8>();
-                    fs::write(mutated_file_name, &new_bytes)?;
+                    mutated[sof_start_index + 5] = random::<u8>();
+                    mutated[sof_start_index + 6] = random::<u8>();
+                    mutated[sof_start_index + 7] = random::<u8>();
+                    mutated[sof_start_index + 8] = random::<u8>();
+                    fs::write(mutated_file_name, &mutated)?;
                     debug!("overwrote the expected width/height of {}", file.display());
                 } else {
                     warn!("jpg does not contain a SOF");
@@ -138,7 +136,6 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                     }
                 }
 
-                let mut new_bytes = bytes.clone();
                 for _ in 0..total_byteflip_mutations {
                     // skip last 2 bytes of file
                     let mut index = rng.random_range(0..bytes.len() - 3);
@@ -146,9 +143,14 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                         index += 1;
                     }
                     let rand_byte = rng.random::<u8>();
-                    new_bytes[index] = rand_byte;
+                    mutated[index] = rand_byte;
                 }
-                fs::write(mutated_file_name, new_bytes)?;
+                fs::write(mutated_file_name, mutated)?;
+                debug!(
+                    "byteflipped {:.2}% of {}",
+                    mutation_rate * 100.0,
+                    file.display()
+                );
             }
             _ => unreachable!(),
         }
