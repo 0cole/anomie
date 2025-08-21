@@ -1,4 +1,8 @@
-use rand::{Rng, rng};
+use std::{fs, io, path::PathBuf};
+
+use image::ImageReader;
+use log::{debug, info, warn};
+use rand::{Rng, random, rng, rngs::ThreadRng};
 
 pub fn mutate_string(s: &str) -> String {
     let mut rng = rng();
@@ -70,4 +74,83 @@ pub fn mutate_bytes(bytes: &mut [u8]) {
             _ => {}
         }
     }
+}
+
+pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
+    let img = ImageReader::open(file)?.decode().unwrap();
+    let bytes: Vec<u8> = fs::read(file)?;
+    let mutated_file_name = "mutated.jpg";
+
+    let total_mutations = rng.random_range(0..3);
+    for _ in 0..total_mutations {
+        match rng.random_range(0..5) {
+            0 => {
+                // truncate the middle
+                let midpoint = bytes.len() / 2;
+                fs::write(mutated_file_name, &bytes[..midpoint])?;
+                debug!("truncating {} at its midpoint", file.display());
+            }
+            1 => {
+                // remove EOF - last 2 bytes are a flag that represent the end
+                // of the jpeg
+                fs::write(mutated_file_name, &bytes[..2])?;
+                debug!("removing the EOF of {}", file.display());
+            }
+            2 => {
+                // corrupt SOI - replace the traditional jpeg start flag with a random byte
+                let mut new_bytes = bytes.clone();
+                let rand_byte = rng.random::<u8>();
+                new_bytes[1] = rand_byte;
+                fs::write(mutated_file_name, &new_bytes)?;
+                debug!("corrupted the SOI of {}", file.display());
+            }
+            3 => {
+                // corrupt SOF - change the expected width/height of the file
+                // xFF xC0 corresponds to baseline
+                // xFF xC2 corresponds to progressive
+                if let Some(sof_start_index) = bytes
+                    .windows(2)
+                    .position(|w| w == [0xFF, 0xC0] || w == [0xFF, 0xC2])
+                {
+                    let mut new_bytes = bytes.clone();
+                    new_bytes[sof_start_index + 5] = random::<u8>();
+                    new_bytes[sof_start_index + 6] = random::<u8>();
+                    new_bytes[sof_start_index + 7] = random::<u8>();
+                    new_bytes[sof_start_index + 8] = random::<u8>();
+                    fs::write(mutated_file_name, &new_bytes)?;
+                    debug!("overwrote the expected width/height of {}", file.display());
+                } else {
+                    warn!("jpg does not contain a SOF");
+                }
+            }
+            4 => {
+                // byteflip non-header data, flip 1.5% of all non-header bytes
+
+                // first collect all header indicies
+                let mut header_indicies: Vec<usize> = Vec::new();
+                for i in 0..bytes.len() - 1 {
+                    // in the image data, xFF bytes are always followed by x00
+                    if bytes[i] == 0xFF && bytes[i + 1] != 0x00 {
+                        header_indicies.push(i);
+                        header_indicies.push(i + 1);
+                    }
+                }
+
+                let mut new_bytes = bytes.clone();
+                let total_byteflip_mutations = (bytes.len() as f64 * 0.015).ceil() as u64;
+                for _ in 0..total_byteflip_mutations {
+                    let mut index = rng.random_range(0..bytes.len() - 1);
+                    while header_indicies.contains(&index) {
+                        index += 1;
+                    }
+                    let rand_byte = rng.random::<u8>();
+                    new_bytes[index] = rand_byte;
+                }
+                fs::write(mutated_file_name, new_bytes)?;
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    Ok(())
 }

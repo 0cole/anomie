@@ -49,7 +49,7 @@ pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
     Ok(())
 }
 
-pub fn clean_up(dir: &str) {
+pub fn clean_up(dir: &str, extension: &str) {
     let files: Vec<PathBuf> = fs::read_dir(dir)
         .unwrap()
         .filter_map(|entry| Some(entry.ok()?.path()))
@@ -57,4 +57,6 @@ pub fn clean_up(dir: &str) {
     for file in files {
         fs::remove_file(file).unwrap();
     }
+
+    fs::remove_file(format!("mutated.{extension}"));
 }

@@ -3,7 +3,7 @@
 binary_path="fuzzing_targets/Huffman-Code/huffman-code/huffman"
 fuzz_type="jpg"
 args="-c"
-max_iterations="100"
+max_iterations="4"
 timeout="100"
 
 if [ -z "$1" ]; then

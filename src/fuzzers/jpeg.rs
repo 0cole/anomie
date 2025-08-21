@@ -4,7 +4,7 @@ use log::info;
 use rand::{Rng, rngs::ThreadRng};
 use std::{fs, path::PathBuf};
 
-use crate::{types::Config, utils::clean_up};
+use crate::{mutate::mutate_jpeg, types::Config, utils::clean_up};
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -104,9 +104,10 @@ pub fn fuzz_jpeg(config: &Config) {
     for id in 0..config.max_iterations {
         let file_num = rng.random_range(0..jpgs.len());
         let file = &jpgs[file_num];
+        mutate_jpeg(rng.clone(), file).unwrap();
     }
 
-    clean_up(corpus_jpeg_dir);
+    clean_up(corpus_jpeg_dir, "jpg");
 
     todo!()
 }
