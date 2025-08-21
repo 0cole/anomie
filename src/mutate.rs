@@ -1,4 +1,4 @@
-use std::{fs, io, path::PathBuf};
+use std::{collections::HashSet, fs, io, path::PathBuf};
 
 use image::ImageReader;
 use log::{debug, info, warn};
@@ -127,12 +127,12 @@ pub fn mutate_jpeg(mut rng: ThreadRng, file: &PathBuf) -> io::Result<()> {
                 // byteflip non-header data, flip 1.5% of all non-header bytes
 
                 // first collect all header indicies
-                let mut header_indicies: Vec<usize> = Vec::new();
+                let mut header_indicies: HashSet<usize> = HashSet::new();
                 for i in 0..bytes.len() - 1 {
                     // in the image data, xFF bytes are always followed by x00
                     if bytes[i] == 0xFF && bytes[i + 1] != 0x00 {
-                        header_indicies.push(i);
-                        header_indicies.push(i + 1);
+                        header_indicies.insert(i);
+                        header_indicies.insert(i + 1);
                     }
                 }
 
