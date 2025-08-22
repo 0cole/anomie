@@ -1,7 +1,7 @@
 #!/bin/bash
 
 binary_path="fuzzing_targets/packJPG/source/packjpg"
-fuzz_type="jpg"
+fuzz_type="txt"
 args=""
 max_iterations="10"
 timeout="100"
