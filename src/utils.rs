@@ -1,12 +1,13 @@
+use anyhow::Result;
 use log::{debug, info};
 use std::{
-    fs, io,
+    fs,
     path::{Path, PathBuf},
 };
 
 use crate::types::Config;
 
-pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
+pub fn create_report_dir(config: &mut Config) -> Result<()> {
     if !Path::new(&config.report_path).exists() {
         fs::create_dir(&config.report_path)?;
         debug!("Created report dir at {}", config.report_path);
@@ -49,14 +50,15 @@ pub fn create_report_dir(config: &mut Config) -> io::Result<()> {
     Ok(())
 }
 
-pub fn clean_up(dir: &str, extension: &str) {
+pub fn clean_up(dir: &str, extension: &str) -> Result<()> {
     let files: Vec<PathBuf> = fs::read_dir(dir)
         .unwrap()
         .filter_map(|entry| Some(entry.ok()?.path()))
         .collect();
     for file in files {
-        fs::remove_file(file).unwrap();
+        fs::remove_file(file)?;
     }
 
-    fs::remove_file(format!("mutated.{extension}"));
+    fs::remove_file(format!("mutated.{extension}"))?;
+    Ok(())
 }

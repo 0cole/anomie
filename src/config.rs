@@ -1,8 +1,6 @@
+use anyhow::Result;
 use clap::Parser;
-use rand::{
-    SeedableRng,
-    rngs::{SmallRng, StdRng},
-};
+use rand::{SeedableRng, rngs::SmallRng};
 use std::fs;
 
 use crate::types::{Config, FuzzType};
@@ -69,7 +67,7 @@ impl RawConfig {
             max_iterations: self.max_iterations,
             report_path: self.report_path.clone(),
             rng,
-            timeout: self.timeout,
+            // timeout: self.timeout,
             validated_fuzz_type,
         })
     }

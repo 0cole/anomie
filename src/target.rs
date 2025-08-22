@@ -1,10 +1,11 @@
-use crate::errors::ExitStatus;
+use anyhow::Result;
 use log::debug;
 use std::{
-    io,
     os::unix::process::ExitStatusExt,
     process::{Command, Output, Stdio},
 };
+
+use crate::errors::ExitStatus;
 
 fn assess_output(output: &Output) -> ExitStatus {
     let status = output.status;
@@ -26,7 +27,7 @@ fn assess_output(output: &Output) -> ExitStatus {
     }
 }
 
-pub fn run_target_file(binary_args: &[String], binary_path: &str) -> io::Result<ExitStatus> {
+pub fn run_target_file(binary_args: &[String], binary_path: &str) -> Result<ExitStatus> {
     let coalesced_args = binary_args.join(" ");
     debug!("Running: {coalesced_args} on {binary_path}");
 
@@ -44,7 +45,7 @@ pub fn run_target_string(
     binary_path: &str,
     binary_args: &[String],
     fuzz_input: &[u8],
-) -> io::Result<ExitStatus> {
+) -> Result<ExitStatus> {
     // TODO make binary_args a vector rather than just &[String]
     let mut input_args: Vec<String> = binary_args.to_vec();
     let fuzz_string_delim: &[String] = &fuzz_input

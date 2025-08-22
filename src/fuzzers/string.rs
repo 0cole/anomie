@@ -1,11 +1,13 @@
+use anyhow::Result;
+use log::info;
+use rand::random_range;
+
 use crate::{
     analysis::analyze_result,
     errors::ExitStatus,
     mutate, target,
     types::{Config, StructuredInput},
 };
-use log::info;
-use rand::random_range;
 
 fn basic_corpus() -> Vec<String> {
     vec![
@@ -20,7 +22,7 @@ fn basic_corpus() -> Vec<String> {
     ]
 }
 
-pub fn fuzz_string(config: &Config) {
+pub fn fuzz_string(config: &Config) -> Result<()> {
     info!("Beginning string fuzzing");
 
     let corpus = basic_corpus();
@@ -32,7 +34,9 @@ pub fn fuzz_string(config: &Config) {
         let structured_input = StructuredInput::StringInput(mutated.clone());
         let result = target::run_target_string(&config.bin_path, &config.bin_args, &mutated)
             .unwrap_or(ExitStatus::ExitCode(0));
-        analyze_result(&config.report_path, result, id, structured_input);
+        analyze_result(&config.report_path, result, id, structured_input)?;
         // input = mutated;
     }
+
+    Ok(())
 }

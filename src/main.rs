@@ -1,6 +1,6 @@
+use anyhow::Result;
 use clap::Parser;
 use log::{error, info};
-use std::io;
 
 mod analysis;
 mod config;
@@ -12,7 +12,7 @@ mod target;
 mod types;
 mod utils;
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     env_logger::init();
 
     // precedence
@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
         Ok(mut config) => {
             info!("Parsed config successfully");
             utils::create_report_dir(&mut config)?;
-            engine::run(&mut config);
+            engine::run(&mut config)?;
         }
         Err(err) => {
             error!("Error when parsing config: {err}");

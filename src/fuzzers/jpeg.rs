@@ -1,10 +1,8 @@
+use anyhow::Result;
 use image;
 use jpeg_encoder;
 use log::info;
-use rand::{
-    Rng,
-    rngs::{SmallRng, ThreadRng},
-};
+use rand::{Rng, rngs::SmallRng};
 use std::{fs, path::PathBuf};
 
 use crate::{
@@ -21,7 +19,7 @@ use crate::{
     clippy::cast_precision_loss,
     clippy::cast_sign_loss
 )]
-fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) {
+fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()> {
     // create a default 16x16 jpg
     let width: u16 = 16;
     let height: u16 = 16;
@@ -34,9 +32,7 @@ fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) {
         *pixel = image::Rgb([red, green, blue]);
     }
 
-    default_img
-        .save(corpus_dir.to_string() + "default.jpg")
-        .unwrap();
+    default_img.save(corpus_dir.to_string() + "default.jpg")?;
     let data = default_img.into_vec();
 
     // generate different qualities, densities, 3 byte/pixel color_types, and progressive encoding
@@ -60,12 +56,10 @@ fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) {
             "{corpus_dir}color-type={:?}_quality={quality}_progressive={progressive:?}_density={density:?}.jpg",
             color_types[color_type_index]
         );
-        let mut encoder = jpeg_encoder::Encoder::new_file(file_name, quality).unwrap();
+        let mut encoder = jpeg_encoder::Encoder::new_file(file_name, quality)?;
         encoder.set_progressive(progressive);
         encoder.set_density(density);
-        encoder
-            .encode(&data, width, height, color_types[color_type_index])
-            .unwrap();
+        encoder.encode(&data, width, height, color_types[color_type_index])?;
     }
 
     // vary the image dimensions with random pixels
@@ -83,19 +77,20 @@ fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) {
             *pixel = image::Rgb([rng.random::<u8>(), rng.random::<u8>(), rng.random::<u8>()]);
         }
         let file_name = format!("{corpus_dir}size-{w}x{h}.jpg");
-        img.save(file_name).unwrap();
+        img.save(file_name)?;
     }
+
+    Ok(())
 }
 
-pub fn fuzz_jpeg(config: &mut Config) {
+pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
     info!("Beginning jpeg fuzzing");
 
     let corpus_jpeg_dir = "corpus/jpeg/";
-    generate_corpus(&mut config.rng, corpus_jpeg_dir);
+    generate_corpus(&mut config.rng, corpus_jpeg_dir)?;
 
     // create a vec of every .jpg in the corpus dir
-    let jpgs: Vec<PathBuf> = fs::read_dir(corpus_jpeg_dir)
-        .unwrap()
+    let jpgs: Vec<PathBuf> = fs::read_dir(corpus_jpeg_dir)?
         .filter_map(|entry| {
             let path = entry.ok()?.path();
             if path.extension()?.to_str()?.eq_ignore_ascii_case("jpg") {
@@ -118,13 +113,14 @@ pub fn fuzz_jpeg(config: &mut Config) {
     for id in 0..config.max_iterations {
         let file_num = config.rng.random_range(0..jpgs.len());
         let file = &jpgs[file_num];
-        mutate_jpeg(&mut config.rng, file).unwrap();
+        mutate_jpeg(&mut config.rng, file)?;
 
         let result = run_target_file(&args, &config.bin_path).unwrap_or(ExitStatus::ExitCode(0));
         let structured_input =
             StructuredInput::FileInput(mutated_file.to_string(), "jpg".to_string());
-        analyze_result(&config.report_path, result, id, structured_input);
+        analyze_result(&config.report_path, result, id, structured_input)?;
     }
 
-    // clean_up(corpus_jpeg_dir, "jpg");
+    clean_up(corpus_jpeg_dir, "jpg")?;
+    Ok(())
 }

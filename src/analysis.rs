@@ -1,9 +1,6 @@
-use std::{
-    fs,
-    io::{self, Read},
-};
-
+use anyhow::Result;
 use log::{debug, info};
+use std::{fs, io::Read};
 
 use crate::{
     errors::{self, ExitStatus},
@@ -15,12 +12,12 @@ fn save_crash(
     crash_id: usize,
     input: StructuredInput,
     crash_type: &str,
-) -> io::Result<()> {
+) -> Result<()> {
     match input {
         StructuredInput::StringInput(bytes) => {
             let path = format!("{report_path}/{crash_type}/crash-{crash_id}.bin");
             debug!("Recording string-based crash at {path:?}");
-            fs::write(path, bytes)
+            fs::write(path, bytes)?;
         }
         StructuredInput::FileInput(file_path, ext) => {
             let output_path = format!("{report_path}/{crash_type}/crash-{crash_id}.{ext}");
@@ -28,9 +25,10 @@ fn save_crash(
 
             let mut contents = Vec::new();
             fs::File::open(&file_path)?.read_to_end(&mut contents)?;
-            fs::write(output_path, contents)
+            fs::write(output_path, contents)?;
         }
     }
+    Ok(())
 }
 
 pub fn analyze_result(
@@ -38,7 +36,7 @@ pub fn analyze_result(
     result: ExitStatus,
     crash_id: usize,
     input: StructuredInput,
-) {
+) -> Result<()> {
     match result {
         ExitStatus::ExitCode(code) => {
             debug!("Process exited gracefully with code {code}");
@@ -56,7 +54,7 @@ pub fn analyze_result(
             info!(
                 "Hit! Process crashed due to a {signal_desc} error ({signal}). Recording in {report_path}/{signal}/ as crash-{crash_id}"
             );
-            save_crash(report_path, crash_id, input, signal).unwrap();
+            save_crash(report_path, crash_id, input, signal)?;
         }
         // ExitStatus::Timeout => {
         //     info!("Hit! Process timed out");
@@ -65,4 +63,5 @@ pub fn analyze_result(
             info!("Hit! Process execution error: {msg}");
         }
     }
+    Ok(())
 }
