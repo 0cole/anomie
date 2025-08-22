@@ -26,8 +26,10 @@ fn main() -> Result<()> {
     match config::RawConfig::parse().validate() {
         Ok(mut config) => {
             info!("Parsed config successfully");
+            utils::initialize_dirs(&config.validated_fuzz_type)?;
             utils::create_report_dir(&mut config)?;
             engine::run(&mut config)?;
+            utils::clean_up(&config.validated_fuzz_type)?;
         }
         Err(err) => {
             error!("Error when parsing config: {err}");

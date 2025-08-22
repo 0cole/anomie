@@ -11,7 +11,6 @@ use crate::{
     mutate::mutate_jpeg,
     target::run_target_file,
     types::{Config, StructuredInput},
-    utils::clean_up,
 };
 
 #[allow(
@@ -86,7 +85,7 @@ fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()> {
 pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
     info!("Beginning jpeg fuzzing");
 
-    let corpus_jpeg_dir = "corpus/jpeg/";
+    let corpus_jpeg_dir = "corpus/jpg/";
     generate_corpus(&mut config.rng, corpus_jpeg_dir)?;
 
     // create a vec of every .jpg in the corpus dir
@@ -101,12 +100,12 @@ pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
         })
         .collect();
 
-    let mutated_file = "mutated.jpg";
+    let mutated_file_path = "temp/mutated.jpg";
     let args: Vec<String> = if config.bin_args == [""] {
-        vec![mutated_file.to_string()]
+        vec![mutated_file_path.to_string()]
     } else {
         let mut v = config.bin_args.clone();
-        v.push(mutated_file.to_string());
+        v.push(mutated_file_path.to_string());
         v
     };
 
@@ -117,10 +116,9 @@ pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
 
         let result = run_target_file(&args, &config.bin_path).unwrap_or(ExitStatus::ExitCode(0));
         let structured_input =
-            StructuredInput::FileInput(mutated_file.to_string(), "jpg".to_string());
+            StructuredInput::FileInput(mutated_file_path.to_string(), "jpg".to_string());
         analyze_result(&config.report_path, result, id, structured_input)?;
     }
 
-    clean_up(corpus_jpeg_dir, "jpg")?;
     Ok(())
 }

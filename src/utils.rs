@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::types::Config;
+use crate::types::{Config, FuzzType};
 
 pub fn create_report_dir(config: &mut Config) -> Result<()> {
     if !Path::new(&config.report_path).exists() {
@@ -50,15 +50,52 @@ pub fn create_report_dir(config: &mut Config) -> Result<()> {
     Ok(())
 }
 
-pub fn clean_up(dir: &str, extension: &str) -> Result<()> {
-    let files: Vec<PathBuf> = fs::read_dir(dir)
-        .unwrap()
-        .filter_map(|entry| Some(entry.ok()?.path()))
-        .collect();
-    for file in files {
-        fs::remove_file(file)?;
+pub fn initialize_dirs(fuzz_type: &FuzzType) -> Result<()> {
+    let extension = match fuzz_type {
+        FuzzType::Txt => "txt",
+        FuzzType::Jpeg => "jpg",
+        FuzzType::Png => "png",
+        FuzzType::Pdf => "pdf",
+        FuzzType::String | FuzzType::SignedInt | FuzzType::UnsignedInt => "",
+    };
+
+    let temp_dir = "temp";
+    if Path::new(temp_dir).exists() {
+        fs::remove_dir_all(temp_dir)?;
+    } else {
+        fs::create_dir(temp_dir)?;
     }
 
-    fs::remove_file(format!("mutated.{extension}"))?;
+    fs::create_dir_all("corpus")?;
+    if !extension.is_empty() {
+        let corpus_extension_dir = format!("corpus/{extension}");
+        fs::create_dir_all(&corpus_extension_dir)?;
+    }
+
+    Ok(())
+}
+
+pub fn clean_up(fuzz_type: &FuzzType) -> Result<()> {
+    let extension = match fuzz_type {
+        FuzzType::Txt => "txt",
+        FuzzType::Jpeg => "jpg",
+        FuzzType::Png => "png",
+        FuzzType::Pdf => "pdf",
+        FuzzType::String | FuzzType::SignedInt | FuzzType::UnsignedInt => "",
+    };
+
+    let temp_dir = "temp";
+
+    if !extension.is_empty() {
+        let files: Vec<PathBuf> = fs::read_dir(format!("corpus/{extension}"))
+            .unwrap()
+            .filter_map(|entry| Some(entry.ok()?.path()))
+            .collect();
+        for file in files {
+            fs::remove_file(file)?;
+        }
+    }
+
+    fs::remove_dir_all(temp_dir)?;
     Ok(())
 }

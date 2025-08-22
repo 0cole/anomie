@@ -3,7 +3,7 @@
 binary_path="fuzzing_targets/packJPG/source/packjpg"
 fuzz_type="jpg"
 args=""
-max_iterations="4"
+max_iterations="10"
 timeout="100"
 
 if [ -z "$1" ]; then
