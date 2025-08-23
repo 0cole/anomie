@@ -83,7 +83,7 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
     let total_mutations = rng.random_range(0..2);
     for _ in 0..total_mutations {
         let mut mutated = bytes.clone();
-        match rng.random_range(0..5) {
+        match rng.random_range(0..7) {
             0 => {
                 // truncate the middle
                 fs::write(mutated_file_name, &bytes[..bytes.len() / 2])?;
@@ -148,6 +148,36 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
                 debug!(
                     "byteflipped {:.2}% of {}",
                     mutation_rate * 100.0,
+                    file.display()
+                );
+            }
+            5 => {
+                // add trailing garbage bytes at end
+                let tail_length = rng.random_range(0..10_000);
+                for _ in 0..tail_length {
+                    mutated.push(rng.random::<u8>());
+                }
+                debug!("added {tail_length} bytes at the end of {}", file.display());
+            }
+            6 => {
+                // overwrite segment lengths, the two bytes after the segment header indicate the segment length
+                let mut header_indicies: Vec<usize> = Vec::new();
+                for i in 0..bytes.len() - 1 {
+                    // in the image data, xFF bytes are always followed by x00
+                    if bytes[i] == 0xFF && bytes[i + 1] != 0x00 {
+                        header_indicies.push(i);
+                    }
+                }
+
+                // generate two bytes from the same rng call
+                let [high_byte, low_byte] = rng.random::<u16>().to_be_bytes();
+
+                let header_index = rng.random_range(0..header_indicies.len());
+                mutated[header_index + 2] = high_byte;
+                mutated[header_index + 3] = low_byte;
+
+                debug!(
+                    "overwrote the segment length at index {header_index} of {}",
                     file.display()
                 );
             }
