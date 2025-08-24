@@ -79,7 +79,7 @@ pub fn mutate_bytes(bytes: &mut [u8]) {
 
 pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
     // let img = ImageReader::open(file)?.decode().unwrap();
-    let jpg: Jpeg = parse_jpeg(file)?;
+    let jpg: crate::fuzzers::jpeg::JpegObject = parse_jpeg(file)?;
     let bytes: Vec<u8> = fs::read(file)?;
     let mutated_file_name = "temp/mutated.jpg";
 
