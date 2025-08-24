@@ -3,7 +3,7 @@ use log::{debug, warn};
 use rand::{Rng, random, rng, rngs::SmallRng};
 use std::{collections::HashSet, fs, path::PathBuf};
 
-use crate::{fuzzers::jpeg::parse_jpeg, types::Jpeg};
+use crate::fuzzers::jpeg::parse_jpeg;
 
 pub fn mutate_string(s: &str) -> String {
     let mut rng = rng();
