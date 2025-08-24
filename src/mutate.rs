@@ -3,6 +3,8 @@ use log::{debug, warn};
 use rand::{Rng, random, rng, rngs::SmallRng};
 use std::{collections::HashSet, fs, path::PathBuf};
 
+use crate::{fuzzers::jpeg::parse_jpeg, types::Jpeg};
+
 pub fn mutate_string(s: &str) -> String {
     let mut rng = rng();
 
@@ -77,30 +79,31 @@ pub fn mutate_bytes(bytes: &mut [u8]) {
 
 pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
     // let img = ImageReader::open(file)?.decode().unwrap();
+    let jpg: Jpeg = parse_jpeg(file)?;
     let bytes: Vec<u8> = fs::read(file)?;
     let mutated_file_name = "temp/mutated.jpg";
 
     let total_mutations = rng.random_range(0..2);
     for _ in 0..total_mutations {
         let mut mutated = bytes.clone();
-        match rng.random_range(0..7) {
+        match rng.random_range(0..=7) {
             0 => {
                 // truncate the middle
-                fs::write(mutated_file_name, &bytes[..bytes.len() / 2])?;
                 debug!("truncating {} at its midpoint", file.display());
+                fs::write(mutated_file_name, &bytes[..bytes.len() / 2])?;
             }
             1 => {
                 // remove EOF - last 2 bytes are a flag that represent the end
                 // of the jpeg
-                fs::write(mutated_file_name, &bytes[..bytes.len() - 2])?;
                 debug!("removing the EOF of {}", file.display());
+                fs::write(mutated_file_name, &bytes[..bytes.len() - 2])?;
             }
             2 => {
                 // corrupt SOI - replace the traditional jpeg start flag with a random byte
                 let rand_byte = rng.random::<u8>();
                 mutated[1] = rand_byte;
+                debug!("corrupting the SOI of {}", file.display());
                 fs::write(mutated_file_name, &mutated)?;
-                debug!("corrupted the SOI of {}", file.display());
             }
             3 => {
                 // corrupt SOF - change the expected width/height of the file
@@ -114,8 +117,11 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
                     mutated[sof_start_index + 6] = random::<u8>();
                     mutated[sof_start_index + 7] = random::<u8>();
                     mutated[sof_start_index + 8] = random::<u8>();
+                    debug!(
+                        "overwriting the expected width/height of {}",
+                        file.display()
+                    );
                     fs::write(mutated_file_name, &mutated)?;
-                    debug!("overwrote the expected width/height of {}", file.display());
                 } else {
                     warn!("jpg does not contain a SOF");
                 }
@@ -144,20 +150,23 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
                     let rand_byte = rng.random::<u8>();
                     mutated[index] = rand_byte;
                 }
-                fs::write(mutated_file_name, mutated)?;
                 debug!(
-                    "byteflipped {:.2}% of {}",
+                    "byteflipping {:.2}% of {}",
                     mutation_rate * 100.0,
                     file.display()
                 );
+                fs::write(mutated_file_name, mutated)?;
             }
             5 => {
                 // add trailing garbage bytes at end
                 let tail_length = rng.random_range(0..10_000);
+                debug!(
+                    "adding {tail_length} bytes at the end of {}",
+                    file.display()
+                );
                 for _ in 0..tail_length {
                     mutated.push(rng.random::<u8>());
                 }
-                debug!("added {tail_length} bytes at the end of {}", file.display());
             }
             6 => {
                 // overwrite segment lengths, the two bytes after the segment header indicate the segment length
@@ -173,13 +182,15 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
                 let [high_byte, low_byte] = rng.random::<u16>().to_be_bytes();
 
                 let header_index = rng.random_range(0..header_indicies.len());
-                mutated[header_index + 2] = high_byte;
-                mutated[header_index + 3] = low_byte;
-
                 debug!(
-                    "overwrote the segment length at index {header_index} of {}",
+                    "overwriting the segment length at index {header_index} of {}",
                     file.display()
                 );
+                mutated[header_index + 2] = high_byte;
+                mutated[header_index + 3] = low_byte;
+            }
+            7 => {
+                // alter quantization tables
             }
             _ => unreachable!(),
         }

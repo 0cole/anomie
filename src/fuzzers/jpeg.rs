@@ -2,7 +2,7 @@ use anyhow::Result;
 use image;
 use jpeg_encoder;
 use log::info;
-use rand::{Rng, rngs::SmallRng};
+use rand::{Rng, rngs::SmallRng, seq::IteratorRandom};
 use std::{fs, path::PathBuf};
 
 use crate::{
@@ -12,6 +12,96 @@ use crate::{
     target::run_target_file,
     types::{Config, StructuredInput},
 };
+
+#[derive(Debug)]
+pub struct JpegObject {
+    pub soi: Vec<u8>,
+    pub segments: Vec<JpegSegment>,
+    pub eoi: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub enum JpegSegment {
+    APP(Vec<u8>),
+    DQT(Vec<u8>),
+    SOF(Vec<u8>),
+    DHT(Vec<u8>),
+    SOS(Vec<u8>),
+    DAT(Vec<u8>), // image data
+    Other(u8, Vec<u8>),
+}
+
+impl JpegObject {
+    pub fn new() -> JpegObject {
+        JpegObject {
+            soi: vec![0xFF, 0xD8],
+            segments: Vec::new(),
+            eoi: vec![0xFF, 0xD9],
+        }
+    }
+
+    pub fn random_dht_mut(&mut self, rng: &mut SmallRng) -> Option<&mut Vec<u8>> {
+        self.segments
+            .iter_mut()
+            .filter_map(|seg| {
+                if let JpegSegment::DQT(data) = seg {
+                    Some(data)
+                } else {
+                    None
+                }
+            })
+            .choose(rng)
+    }
+
+    pub fn random_dqt_mut(&mut self, rng: &mut SmallRng) -> Option<&mut Vec<u8>> {
+        self.segments
+            .iter_mut()
+            .filter_map(|seg| {
+                if let JpegSegment::DQT(data) = seg {
+                    Some(data)
+                } else {
+                    None
+                }
+            })
+            .choose(rng)
+    }
+
+    pub fn app_mut(&mut self) -> Option<&mut Vec<u8>> {
+        for seg in &mut self.segments {
+            if let JpegSegment::APP(data) = seg {
+                return Some(data);
+            }
+        }
+        None
+    }
+
+    pub fn sof_mut(&mut self) -> Option<&mut Vec<u8>> {
+        for seg in &mut self.segments {
+            if let JpegSegment::SOF(data) = seg {
+                return Some(data);
+            }
+        }
+        None
+    }
+
+    pub fn sos_mut(&mut self) -> Option<&mut Vec<u8>> {
+        for seg in &mut self.segments {
+            if let JpegSegment::SOS(data) = seg {
+                return Some(data);
+            }
+        }
+        None
+    }
+
+    pub fn dat_mut(&mut self) -> Option<&mut Vec<u8>> {
+        for seg in &mut self.segments {
+            if let JpegSegment::DAT(data) = seg {
+                return Some(data);
+            }
+        }
+        None
+    }
+}
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -80,6 +170,68 @@ fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn parse_jpeg(file: &PathBuf) -> Result<JpegObject> {
+    let bytes: Vec<u8> = fs::read(file)?;
+    let mut jpg = JpegObject::new();
+
+    for i in 0..bytes.len() - 1 {
+        if bytes[i] == 0xFF {
+            // in the image data, xFF bytes are always followed by x00 so we want to
+            // skip them, also skip the SOI/EOI
+            if bytes[i + 1] == 0x00
+                || bytes[i + 1] == 0xFF
+                || bytes[i + 1] == 0xD8
+                || bytes[i + 1] == 0xD9
+            {
+                continue;
+            }
+
+            let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
+            match bytes[i + 1] {
+                0xE0 => {
+                    // APP segment
+                    let app_segment = JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec());
+                    jpg.segments.push(app_segment);
+                }
+                0xDB => {
+                    // DQT segment
+                    let dqt_segment = JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec());
+                    jpg.segments.push(dqt_segment);
+                }
+                0xC0 | 0xC2 => {
+                    // SOF segment
+                    let sof_segment = JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec());
+                    jpg.segments.push(sof_segment);
+                }
+                0xC4 => {
+                    // DHT segment
+                    let dht_segment = JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec());
+                    jpg.segments.push(dht_segment);
+                }
+                0xDA => {
+                    // SOS segment + image data
+                    let sos_segment = JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec());
+                    jpg.segments.push(sos_segment);
+
+                    let mut image_data = Vec::new();
+                    let mut image_data_index = i + segment_length + 2;
+                    while !(bytes[image_data_index] == 0xFF && bytes[image_data_index + 1] == 0xD9)
+                    {
+                        image_data.push(bytes[image_data_index]);
+                        image_data_index += 1;
+                    }
+                    let data_segment = JpegSegment::DAT(image_data);
+                    jpg.segments.push(data_segment);
+                }
+                _ => {
+                    // must occur within a DHT, skip
+                }
+            }
+        }
+    }
+    Ok(jpg)
 }
 
 pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
