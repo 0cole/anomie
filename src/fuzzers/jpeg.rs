@@ -20,6 +20,7 @@ pub struct JpegObject {
     pub eoi: Vec<u8>,
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug)]
 pub enum JpegSegment {
     APP(Vec<u8>),
@@ -189,32 +190,13 @@ pub fn parse_jpeg(file: &PathBuf) -> Result<JpegObject> {
             }
 
             let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
-            match bytes[i + 1] {
-                0xE0 => {
-                    // APP segment
-                    let app_segment = JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec());
-                    jpg.segments.push(app_segment);
-                }
-                0xDB => {
-                    // DQT segment
-                    let dqt_segment = JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec());
-                    jpg.segments.push(dqt_segment);
-                }
-                0xC0 | 0xC2 => {
-                    // SOF segment
-                    let sof_segment = JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec());
-                    jpg.segments.push(sof_segment);
-                }
-                0xC4 => {
-                    // DHT segment
-                    let dht_segment = JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec());
-                    jpg.segments.push(dht_segment);
-                }
+            let segment = match bytes[i + 1] {
+                0xE0 => JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec()),
+                0xDB => JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec()),
+                0xC0 | 0xC2 => JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec()),
+                0xC4 => JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec()),
                 0xDA => {
-                    // SOS segment + image data
-                    let sos_segment = JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec());
-                    jpg.segments.push(sos_segment);
-
+                    // get image data
                     let mut image_data = Vec::new();
                     let mut image_data_index = i + segment_length + 2;
                     while !(bytes[image_data_index] == 0xFF && bytes[image_data_index + 1] == 0xD9)
@@ -224,11 +206,13 @@ pub fn parse_jpeg(file: &PathBuf) -> Result<JpegObject> {
                     }
                     let data_segment = JpegSegment::DAT(image_data);
                     jpg.segments.push(data_segment);
+
+                    JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec())
                 }
-                _ => {
-                    // must occur within a DHT, skip
-                }
-            }
+                // TODO: more idiomatic way to ignore this
+                _ => JpegSegment::Other(0xFF, Vec::new()),
+            };
+            jpg.segments.push(segment);
         }
     }
     Ok(jpg)
