@@ -3,7 +3,7 @@ use log::{debug, warn};
 use rand::{Rng, random, rng, rngs::SmallRng};
 use std::{collections::HashSet, fs, path::PathBuf};
 
-use crate::fuzzers::jpeg::parse_jpeg;
+use crate::fuzzers::jpeg::JpegObject;
 
 pub fn mutate_string(s: &str) -> String {
     let mut rng = rng();
@@ -79,7 +79,7 @@ pub fn mutate_bytes(bytes: &mut [u8]) {
 
 pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
     // let img = ImageReader::open(file)?.decode().unwrap();
-    let jpg: crate::fuzzers::jpeg::JpegObject = parse_jpeg(file)?;
+    let jpg = JpegObject::new(file);
     let bytes: Vec<u8> = fs::read(file)?;
     let mutated_file_name = "temp/mutated.jpg";
 

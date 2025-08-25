@@ -33,12 +33,54 @@ pub enum JpegSegment {
 }
 
 impl JpegObject {
-    pub fn new() -> JpegObject {
-        JpegObject {
-            soi: vec![0xFF, 0xD8],
-            segments: Vec::new(),
-            eoi: vec![0xFF, 0xD9],
+    pub fn new(file: &PathBuf) -> Result<JpegObject> {
+        let bytes: Vec<u8> = fs::read(file)?;
+        let mut segments = Vec::new();
+
+        for i in 0..bytes.len() - 1 {
+            if bytes[i] == 0xFF {
+                // in the image data, xFF bytes are always followed by x00 so we want to
+                // skip them, also skip the SOI/EOI
+                if bytes[i + 1] == 0x00
+                    || bytes[i + 1] == 0xFF
+                    || bytes[i + 1] == 0xD8
+                    || bytes[i + 1] == 0xD9
+                {
+                    continue;
+                }
+
+                let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
+                let segment = match bytes[i + 1] {
+                    0xE0 => JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec()),
+                    0xDB => JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec()),
+                    0xC0 | 0xC2 => JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec()),
+                    0xC4 => JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec()),
+                    0xDA => {
+                        // get image data
+                        let mut image_data = Vec::new();
+                        let mut image_data_index = i + segment_length + 2;
+                        while !(bytes[image_data_index] == 0xFF
+                            && bytes[image_data_index + 1] == 0xD9)
+                        {
+                            image_data.push(bytes[image_data_index]);
+                            image_data_index += 1;
+                        }
+                        let data_segment = JpegSegment::DAT(image_data);
+                        segments.push(data_segment);
+
+                        JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec())
+                    }
+                    // TODO: more idiomatic way to ignore this
+                    _ => JpegSegment::Other(0xFF, Vec::new()),
+                };
+                segments.push(segment);
+            }
         }
+        Ok(JpegObject {
+            soi: vec![0xFF, 0xD8],
+            segments,
+            eoi: vec![0xFF, 0xD9],
+        })
     }
 
     pub fn random_dht_mut(&mut self, rng: &mut SmallRng) -> Option<&mut Vec<u8>> {
@@ -171,51 +213,6 @@ fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()> {
     }
 
     Ok(())
-}
-
-pub fn parse_jpeg(file: &PathBuf) -> Result<JpegObject> {
-    let bytes: Vec<u8> = fs::read(file)?;
-    let mut jpg = JpegObject::new();
-
-    for i in 0..bytes.len() - 1 {
-        if bytes[i] == 0xFF {
-            // in the image data, xFF bytes are always followed by x00 so we want to
-            // skip them, also skip the SOI/EOI
-            if bytes[i + 1] == 0x00
-                || bytes[i + 1] == 0xFF
-                || bytes[i + 1] == 0xD8
-                || bytes[i + 1] == 0xD9
-            {
-                continue;
-            }
-
-            let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
-            let segment = match bytes[i + 1] {
-                0xE0 => JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec()),
-                0xDB => JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec()),
-                0xC0 | 0xC2 => JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec()),
-                0xC4 => JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec()),
-                0xDA => {
-                    // get image data
-                    let mut image_data = Vec::new();
-                    let mut image_data_index = i + segment_length + 2;
-                    while !(bytes[image_data_index] == 0xFF && bytes[image_data_index + 1] == 0xD9)
-                    {
-                        image_data.push(bytes[image_data_index]);
-                        image_data_index += 1;
-                    }
-                    let data_segment = JpegSegment::DAT(image_data);
-                    jpg.segments.push(data_segment);
-
-                    JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec())
-                }
-                // TODO: more idiomatic way to ignore this
-                _ => JpegSegment::Other(0xFF, Vec::new()),
-            };
-            jpg.segments.push(segment);
-        }
-    }
-    Ok(jpg)
 }
 
 pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
