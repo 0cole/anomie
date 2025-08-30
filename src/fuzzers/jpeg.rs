@@ -13,7 +13,7 @@ use crate::{
     types::{Config, StructuredInput},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JpegObject {
     pub soi: Vec<u8>,
     pub segments: Vec<JpegSegment>,
@@ -21,7 +21,7 @@ pub struct JpegObject {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum JpegSegment {
     APP(Vec<u8>),
     DQT(Vec<u8>),
@@ -37,25 +37,25 @@ impl JpegObject {
         let bytes: Vec<u8> = fs::read(file)?;
         let mut segments = Vec::new();
 
-        for i in 0..bytes.len() - 1 {
-            if bytes[i] == 0xFF {
-                // in the image data, xFF bytes are always followed by x00 so we want to
-                // skip them, also skip the SOI/EOI
-                if bytes[i + 1] == 0x00
+        let mut i = 0;
+        while i < bytes.len() - 3 {
+            // in the image data, xFF bytes are always followed by x00 so we want to
+            // skip them, also skip the SOI/EOI
+            if bytes[i] == 0xFF
+                && !(bytes[i + 1] == 0x00
                     || bytes[i + 1] == 0xFF
                     || bytes[i + 1] == 0xD8
-                    || bytes[i + 1] == 0xD9
-                {
-                    continue;
-                }
-
+                    || bytes[i + 1] == 0xD9)
+            {
                 let segment_length = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
-                let segment = match bytes[i + 1] {
-                    0xE0 => JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec()),
-                    0xDB => JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec()),
-                    0xC0 | 0xC2 => JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec()),
-                    0xC4 => JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec()),
-                    0xDA => {
+                let segment = match (bytes[i], bytes[i + 1]) {
+                    (0xFF, 0xE0) => JpegSegment::APP(bytes[i..i + segment_length + 2].to_vec()),
+                    (0xFF, 0xDB) => JpegSegment::DQT(bytes[i..i + segment_length + 2].to_vec()),
+                    (0xFF, 0xC0 | 0xC2) => {
+                        JpegSegment::SOF(bytes[i..i + segment_length + 2].to_vec())
+                    }
+                    (0xFF, 0xC4) => JpegSegment::DHT(bytes[i..i + segment_length + 2].to_vec()),
+                    (0xFF, 0xDA) => {
                         // get image data
                         let mut image_data = Vec::new();
                         let mut image_data_index = i + segment_length + 2;
@@ -65,22 +65,51 @@ impl JpegObject {
                             image_data.push(bytes[image_data_index]);
                             image_data_index += 1;
                         }
-                        let data_segment = JpegSegment::DAT(image_data);
-                        segments.push(data_segment);
 
-                        JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec())
+                        let data_segment = JpegSegment::DAT(image_data);
+                        let sos_segment =
+                            JpegSegment::SOS(bytes[i..i + segment_length + 2].to_vec());
+                        segments.push(sos_segment);
+                        segments.push(data_segment);
+                        break;
                     }
                     // TODO: more idiomatic way to ignore this
-                    _ => JpegSegment::Other(0xFF, Vec::new()),
+                    _ => unimplemented!(),
                 };
                 segments.push(segment);
+                i += segment_length + 2;
+                continue;
             }
+            i += 1;
         }
         Ok(JpegObject {
             soi: vec![0xFF, 0xD8],
             segments,
             eoi: vec![0xFF, 0xD9],
         })
+    }
+
+    pub fn write_to_file(&self, file: &'static str) -> Result<()> {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        bytes.extend_from_slice(&self.soi);
+        for seg in &self.segments {
+            match seg {
+                JpegSegment::APP(data)
+                | JpegSegment::DQT(data)
+                | JpegSegment::SOF(data)
+                | JpegSegment::DHT(data)
+                | JpegSegment::SOS(data)
+                | JpegSegment::DAT(data)
+                | JpegSegment::Other(_, data) => {
+                    bytes.extend_from_slice(data);
+                }
+            }
+        }
+        bytes.extend_from_slice(&self.eoi);
+
+        fs::write(file, bytes)?;
+        Ok(())
     }
 
     pub fn random_dht_mut(&mut self, rng: &mut SmallRng) -> Option<&mut Vec<u8>> {
@@ -107,6 +136,20 @@ impl JpegObject {
                 }
             })
             .choose(rng)
+    }
+
+    pub fn soi_mut(&mut self) -> Option<&mut Vec<u8>> {
+        if !self.soi.is_empty() {
+            return Some(&mut self.soi);
+        }
+        None
+    }
+
+    pub fn eoi_mut(&mut self) -> Option<&mut Vec<u8>> {
+        if !self.eoi.is_empty() {
+            return Some(&mut self.eoi);
+        }
+        None
     }
 
     pub fn app_mut(&mut self) -> Option<&mut Vec<u8>> {
