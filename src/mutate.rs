@@ -88,7 +88,7 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
     for _ in 0..total_mutations {
         let mut mutated = bytes.clone();
         let mut mutated_jpg: JpegObject = jpg.clone();
-        match rng.random_range(0..=7) {
+        match rng.random_range(0..=9) {
             0 => {
                 // [RAW BYTES] truncate the middle
                 debug!("truncating {} at its midpoint", file.display());
@@ -198,7 +198,38 @@ pub fn mutate_jpeg(rng: &mut SmallRng, file: &PathBuf) -> Result<()> {
                 }
             }
             7 => {
-                // alter quantization tables
+                // rearrange the segments
+                let mut first = usize::MAX;
+                let mut second = usize::MAX;
+                while first == second {
+                    first = rng.random_range(0..mutated_jpg.segments.len());
+                    second = rng.random_range(0..mutated_jpg.segments.len());
+                }
+                let temp = mutated_jpg.segments[first].clone();
+                mutated_jpg.segments[first] = mutated_jpg.segments[second].clone();
+                mutated_jpg.segments[second] = temp;
+                debug!(
+                    "swapping the two segments at positions {first} and {second} of {}",
+                    file.display()
+                );
+
+                mutated_jpg.write_to_file(mutated_file_name)?;
+            }
+            8 => {
+                // alter dht tables
+                if let Some(dht) = mutated_jpg.random_dht_mut(rng) {
+                    mutate_bytes(&mut dht[5..]);
+                    debug!("mutating one of the dhts of {}", file.display());
+                    mutated_jpg.write_to_file(mutated_file_name)?;
+                }
+            }
+            9 => {
+                // alter dqt tables
+                if let Some(dqt) = mutated_jpg.random_dqt_mut(rng) {
+                    mutate_bytes(&mut dqt[5..]);
+                    debug!("mutating one of the dqts of {}", file.display());
+                    mutated_jpg.write_to_file(mutated_file_name)?;
+                }
             }
             _ => unreachable!(),
         }
