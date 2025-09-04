@@ -9,7 +9,7 @@ pub struct Config {
     pub max_iterations: usize,
     pub report_path: String,
     pub rng: SmallRng,
-    // pub timeout: u64,
+    pub timeout: u64,
     pub validated_fuzz_type: FuzzType,
 }
 

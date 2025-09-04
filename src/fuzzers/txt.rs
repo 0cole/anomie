@@ -55,8 +55,8 @@ pub fn fuzz_txt(config: &mut Config) -> Result<()> {
         fs::write(mutated_file_path, &bytes)?;
 
         // TODO add arg functionality
-        let result = run_target_file(&bin_args_plus_file, &config.bin_path)
-            .unwrap_or(ExitStatus::ExitCode(0));
+        let result =
+            run_target_file(config, &bin_args_plus_file).unwrap_or(ExitStatus::ExitCode(0));
         let structured_input =
             StructuredInput::FileInput(mutated_file_path.to_string(), "txt".to_string());
         analyze_result(&config.report_path, result, id, structured_input)?;

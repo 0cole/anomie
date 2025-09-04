@@ -1,53 +1,73 @@
 use anyhow::Result;
 use log::debug;
 use std::{
+    io::Read,
     os::unix::process::ExitStatusExt,
-    process::{Command, Output, Stdio},
+    process::{Child, Command, Stdio},
+    time::Duration,
 };
+use wait_timeout::ChildExt;
 
-use crate::errors::ExitStatus;
+use crate::{errors::ExitStatus, types::Config};
 
-fn assess_output(output: &Output) -> ExitStatus {
-    let status = output.status;
+fn run_child(child: &mut Child, timeout: Duration) -> Result<ExitStatus> {
+    if let Some(status) = child.wait_timeout(timeout)? {
+        let mut stdout = String::new();
+        child
+            .stdout
+            .as_mut()
+            .unwrap()
+            .read_to_string(&mut stdout)
+            .unwrap();
+        let mut stderr = String::new();
+        child
+            .stderr
+            .as_mut()
+            .unwrap()
+            .read_to_string(&mut stderr)
+            .unwrap();
 
-    debug!(
-        "Code: {:?} (SIG {:?})\nSTDOUT returned: {:?}\nSTDERR returned: {:?}",
-        status.code(),
-        status.signal().unwrap_or(0),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+        debug!(
+            "Code: {:?} (SIG {:?})\nSTDOUT returned: {:?}\nSTDERR returned: {:?}",
+            status.code(),
+            status.signal().unwrap_or(0),
+            stdout,
+            stderr,
+        );
 
-    if let Some(sig) = status.signal() {
-        ExitStatus::Signal(sig)
-    } else if let Some(code) = status.code() {
-        ExitStatus::ExitCode(code)
+        if let Some(sig) = status.signal() {
+            Ok(ExitStatus::Signal(sig))
+        } else if let Some(code) = status.code() {
+            Ok(ExitStatus::ExitCode(code))
+        } else {
+            Ok(ExitStatus::Error("Unknown termination".into()))
+        }
     } else {
-        ExitStatus::Error("Unknown termination".into())
+        child.kill()?;
+        child.wait()?;
+        Ok(ExitStatus::Error(
+            format!("Exceeded timeout of {:?} ms", timeout.as_millis()).to_string(),
+        ))
     }
 }
 
-pub fn run_target_file(binary_args: &[String], binary_path: &str) -> Result<ExitStatus> {
+pub fn run_target_file(config: &Config, binary_args: &[String]) -> Result<ExitStatus> {
     let coalesced_args = binary_args.join(" ");
-    debug!("Running: {coalesced_args} on {binary_path}");
+    debug!("Running: {coalesced_args} on {}", config.bin_path);
 
-    let output = Command::new(binary_path)
+    let timeout = Duration::from_millis(config.timeout);
+    let mut child = Command::new(&config.bin_path)
         .args(binary_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output()?;
+        .spawn()?;
 
-    let exit_status = assess_output(&output);
+    let exit_status = run_child(&mut child, timeout)?;
     Ok(exit_status)
 }
 
-pub fn run_target_string(
-    binary_path: &str,
-    binary_args: &[String],
-    fuzz_input: &[u8],
-) -> Result<ExitStatus> {
-    // TODO make binary_args a vector rather than just &[String]
-    let mut input_args: Vec<String> = binary_args.to_vec();
+pub fn run_target_string(config: &Config, fuzz_input: &[u8]) -> Result<ExitStatus> {
+    let mut input_args = config.bin_args.clone();
     let fuzz_string_delim: &[String] = &fuzz_input
         .split(|&b| b == b' ') // use a space to delimit the args
         .map(|s| String::from_utf8_lossy(s).into_owned())
@@ -63,12 +83,13 @@ pub fn run_target_string(
         debug!("Running: {coalesced_args}");
     }
 
-    let output = Command::new(binary_path)
+    let timeout = Duration::from_millis(config.timeout);
+    let mut child = Command::new(&config.bin_path)
         .args(input_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output()?;
+        .spawn()?;
 
-    let exit_status = assess_output(&output);
+    let exit_status = run_child(&mut child, timeout)?;
     Ok(exit_status)
 }

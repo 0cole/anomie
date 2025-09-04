@@ -1,10 +1,10 @@
 #!/bin/bash
 
-binary_path="fuzzing_targets/packJPG/source/packjpg"
+binary_path="./fuzzing_targets/packJPG/source/packjpg"
 fuzz_type="jpg"
-args=""
-max_iterations="10"
-timeout="100"
+args="-np"
+max_iterations="100"
+timeout="5000"
 
 if [ -z "$1" ]; then
   log_type="info"

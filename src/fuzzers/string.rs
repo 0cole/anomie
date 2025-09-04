@@ -32,8 +32,8 @@ pub fn fuzz_string(config: &Config) -> Result<()> {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input).into_bytes();
         let structured_input = StructuredInput::StringInput(mutated.clone());
-        let result = target::run_target_string(&config.bin_path, &config.bin_args, &mutated)
-            .unwrap_or(ExitStatus::ExitCode(0));
+        let result =
+            target::run_target_string(&config, &mutated).unwrap_or(ExitStatus::ExitCode(0));
         analyze_result(&config.report_path, result, id, structured_input)?;
         // input = mutated;
     }
