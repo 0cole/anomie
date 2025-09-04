@@ -55,23 +55,26 @@ pub fn mutate_bytes(bytes: &mut [u8]) {
                 // bitmask mutation
                 let mask: u8 = rng.random();
                 bytes[index] ^= mask;
-                debug!("applying a bitmask to index {index}");
+                debug!("applying a bitmask at index {index}");
             }
             1 => {
                 // bit flip
                 let bit_index = rng.random_range(0..8);
                 let mutated_byte = bytes[index] ^ (1 << bit_index);
                 bytes[index] = mutated_byte;
+                debug!("applying a bitflip at index {index}");
             }
             2 => {
                 // byte insertion
                 let new_byte: u8 = rng.random();
                 bytes[index..].rotate_right(1);
                 bytes[index] = new_byte;
+                debug!("inserting the byte <{new_byte}> at index {index}");
             }
             3 => {
                 // byte shift
                 bytes.rotate_left(1);
+                debug!("shifting everything left by 1");
             }
             _ => {}
         }
