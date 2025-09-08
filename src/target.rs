@@ -45,9 +45,7 @@ fn run_child(child: &mut Child, timeout: Duration) -> Result<ExitStatus> {
     } else {
         child.kill()?;
         child.wait()?;
-        Ok(ExitStatus::Error(
-            format!("Exceeded timeout of {:?} ms", timeout.as_millis()).to_string(),
-        ))
+        Ok(ExitStatus::Timeout(timeout.as_millis()))
     }
 }
 

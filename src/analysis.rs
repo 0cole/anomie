@@ -56,9 +56,9 @@ pub fn analyze_result(
             );
             save_crash(report_path, crash_id, input, signal)?;
         }
-        // ExitStatus::Timeout => {
-        //     info!("Hit! Process timed out");
-        // }
+        ExitStatus::Timeout(limit) => {
+            info!("Hit! Process timed out after exceeding {limit} ms");
+        }
         ExitStatus::Error(msg) => {
             info!("Hit! Process execution error: {msg}");
         }

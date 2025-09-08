@@ -3,6 +3,7 @@ pub enum ExitStatus {
     ExitCode(i32),
     Signal(i32),
     Error(String),
+    Timeout(u128),
 }
 
 pub const SIGILL: i32 = 4; // abnormal termination
