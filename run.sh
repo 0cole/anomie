@@ -1,8 +1,8 @@
 #!/bin/bash
 
-binary_path="./fuzzing_targets/packJPG/source/packjpg"
+binary_path="/usr/local/bin/magick"
 fuzz_type="jpg"
-args="-np"
+args="temp/mutated.jpg -verbose -encipher hi.txt temp/enciphered.jpg"
 max_iterations="100"
 timeout="5000"
 

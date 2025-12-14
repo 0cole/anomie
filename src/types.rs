@@ -1,20 +1,36 @@
 use rand::rngs::SmallRng;
+use serde::{Deserialize, Serialize};
 
 // Fuzzer global config, this is the struct used after input validation
 // (eg. verifying the binary exists, making sure the FuzzType is valid)
 #[derive(Debug)]
 pub struct Config {
+    pub report_path: String,
+    pub rng: SmallRng,
+    pub run_details: RunDetails,
+}
+
+// The data that should be serialized into a report.json. This allows
+// for reproducibility and details for each report.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RunDetails {
     pub bin_args: Vec<String>,
     pub bin_path: String,
     pub max_iterations: usize,
-    pub report_path: String,
-    pub rng: SmallRng,
-    pub timeout: u64,
     pub validated_fuzz_type: FuzzType,
+    pub timeout: u64,
+    pub total_hits: u64,
+    pub sigill_hits: u64,
+    pub sigabrt_hits: u64,
+    pub sigfpe_hits: u64,
+    pub sigsegv_hits: u64,
+    pub sigpipe_hits: u64,
+    pub sigterm_hits: u64,
+    pub timeout_hits: u64,
 }
 
 // Describes the types supported by the fuzzer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FuzzType {
     String,
     Txt,

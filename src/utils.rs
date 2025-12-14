@@ -39,6 +39,7 @@ pub fn create_report_dir(config: &mut Config) -> Result<()> {
     fs::create_dir(new_dir_path.clone() + "/SIGSEGV")?;
     fs::create_dir(new_dir_path.clone() + "/SIGPIPE")?;
     fs::create_dir(new_dir_path.clone() + "/SIGTERM")?;
+    fs::create_dir(new_dir_path.clone() + "/TIMEOUT")?;
 
     // update the subdir num in config
     info!(
@@ -72,6 +73,12 @@ pub fn initialize_dirs(fuzz_type: &FuzzType) -> Result<()> {
         fs::create_dir_all(&corpus_extension_dir)?;
     }
 
+    Ok(())
+}
+
+pub fn create_report_json(config: &Config) -> Result<()> {
+    let report_json = serde_json::to_string(&config.run_details)?;
+    fs::write(config.report_path.clone() + "/report.json", report_json)?;
     Ok(())
 }
 

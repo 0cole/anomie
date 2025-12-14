@@ -41,10 +41,10 @@ pub fn fuzz_txt(config: &mut Config) -> Result<()> {
 
     // setup the args
     let mutated_file_path = "temp/mutated.txt";
-    let mut bin_args_plus_file = config.bin_args.clone();
+    let mut bin_args_plus_file = config.run_details.bin_args.clone();
     bin_args_plus_file.push(mutated_file_path.to_string());
 
-    for id in 0..config.max_iterations {
+    for id in 0..config.run_details.max_iterations {
         // pick a random file from our corpus
         let file_num = config.rng.random_range(0..CORPUS_SIZE);
         let file = format!("{corpus_txt_dir}/{file_num}.txt");
@@ -59,7 +59,13 @@ pub fn fuzz_txt(config: &mut Config) -> Result<()> {
             run_target_file(config, &bin_args_plus_file).unwrap_or(ExitStatus::ExitCode(0));
         let structured_input =
             StructuredInput::FileInput(mutated_file_path.to_string(), "txt".to_string());
-        analyze_result(&config.report_path, result, id, structured_input)?;
+        analyze_result(
+            &config.report_path,
+            &mut config.run_details,
+            result,
+            id,
+            structured_input,
+        )?;
     }
 
     Ok(())

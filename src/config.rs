@@ -3,7 +3,7 @@ use clap::Parser;
 use rand::{SeedableRng, rngs::SmallRng};
 use std::fs;
 
-use crate::types::{Config, FuzzType};
+use crate::types::{Config, FuzzType, RunDetails};
 
 #[derive(Parser, Debug)]
 pub struct RawConfig {
@@ -61,14 +61,26 @@ impl RawConfig {
         // parse the args and format them as a vector
         let bin_args: Vec<String> = self.bin_args.split(' ').map(String::from).collect();
 
-        Ok(Config {
-            bin_args,
+        let run_details = RunDetails {
+            bin_args: bin_args.clone(),
             bin_path: self.bin_path.clone(),
             max_iterations: self.max_iterations,
+            validated_fuzz_type: validated_fuzz_type.clone(),
+            timeout: self.timeout,
+            total_hits: 0,
+            timeout_hits: 0,
+            sigill_hits: 0,
+            sigabrt_hits: 0,
+            sigfpe_hits: 0,
+            sigsegv_hits: 0,
+            sigpipe_hits: 0,
+            sigterm_hits: 0,
+        };
+
+        Ok(Config {
             report_path: self.report_path.clone(),
             rng,
-            timeout: self.timeout,
-            validated_fuzz_type,
+            run_details,
         })
     }
 }

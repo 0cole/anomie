@@ -22,19 +22,25 @@ fn basic_corpus() -> Vec<String> {
     ]
 }
 
-pub fn fuzz_string(config: &Config) -> Result<()> {
+pub fn fuzz_string(config: &mut Config) -> Result<()> {
     info!("Beginning string fuzzing");
 
     let corpus = basic_corpus();
     let mut input: String;
 
-    for id in 0..config.max_iterations {
+    for id in 0..config.run_details.max_iterations {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input).into_bytes();
         let structured_input = StructuredInput::StringInput(mutated.clone());
         let result =
             target::run_target_string(&config, &mutated).unwrap_or(ExitStatus::ExitCode(0));
-        analyze_result(&config.report_path, result, id, structured_input)?;
+        analyze_result(
+            &config.report_path,
+            &mut config.run_details,
+            result,
+            id,
+            structured_input,
+        )?;
         // input = mutated;
     }
 
