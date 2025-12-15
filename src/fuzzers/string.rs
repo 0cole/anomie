@@ -28,7 +28,7 @@ pub fn fuzz_string(config: &mut Config) -> Result<()> {
     let corpus = basic_corpus();
     let mut input: String;
 
-    for id in 0..config.run_details.max_iterations {
+    for id in 0..config.iterations {
         input = corpus[random_range(..corpus.len())].clone();
         let mutated = mutate::mutate_string(&input).into_bytes();
         let structured_input = StructuredInput::StringInput(mutated.clone());
@@ -36,7 +36,7 @@ pub fn fuzz_string(config: &mut Config) -> Result<()> {
             target::run_target_string(&config, &mutated).unwrap_or(ExitStatus::ExitCode(0));
         analyze_result(
             &config.report_path,
-            &mut config.run_details,
+            &mut config.crash_stats,
             result,
             id,
             structured_input,

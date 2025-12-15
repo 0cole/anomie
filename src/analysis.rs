@@ -4,7 +4,7 @@ use std::{fs, io::Read};
 
 use crate::{
     errors::{self, ExitStatus},
-    types::{RunDetails, StructuredInput},
+    types::{CrashStats, StructuredInput},
 };
 
 fn save_crash(
@@ -33,7 +33,7 @@ fn save_crash(
 
 pub fn analyze_result(
     report_path: &str,
-    run_details: &mut RunDetails,
+    crash_stats: &mut CrashStats,
     result: ExitStatus,
     crash_id: usize,
     input: StructuredInput,
@@ -45,27 +45,27 @@ pub fn analyze_result(
         ExitStatus::Signal(sig) => {
             let (signal_desc, signal) = match sig {
                 errors::SIGILL => {
-                    run_details.sigill_hits += 1;
+                    crash_stats.sigill += 1;
                     ("illegal instruction", "SIGILL")
                 }
                 errors::SIGABRT => {
-                    run_details.sigabrt_hits += 1;
+                    crash_stats.sigabrt += 1;
                     ("abort function", "SIGABRT")
                 }
                 errors::SIGFPE => {
-                    run_details.sigfpe_hits += 1;
+                    crash_stats.sigfpe += 1;
                     ("floating point exception", "SIGFPE")
                 }
                 errors::SIGSEGV => {
-                    run_details.sigsegv_hits += 1;
+                    crash_stats.sigsegv += 1;
                     ("segmentation fault", "SIGSEGV")
                 }
                 errors::SIGPIPE => {
-                    run_details.sigpipe_hits += 1;
+                    crash_stats.sigpipe += 1;
                     ("pipe error", "SIGPIPE")
                 }
                 errors::SIGTERM => {
-                    run_details.sigterm_hits += 1;
+                    crash_stats.sigterm += 1;
                     ("termination error", "SIGTERM")
                 }
                 _ => ("unknown error", "UNKNOWN"),
@@ -74,13 +74,13 @@ pub fn analyze_result(
                 "Hit! Process crashed due to a {signal_desc} error ({signal}). Recording in {report_path}/{signal}/ as crash-{crash_id}"
             );
             save_crash(report_path, crash_id, input, signal)?;
-            run_details.total_hits += 1;
+            crash_stats.total += 1;
         }
         ExitStatus::Timeout(limit) => {
-            run_details.timeout_hits += 1;
+            crash_stats.timeout += 1;
             info!("Hit! Process timed out after exceeding {limit} ms");
             save_crash(report_path, crash_id, input, "TIMEOUT")?;
-            run_details.total_hits += 1;
+            crash_stats.total += 1;
         }
         ExitStatus::Error(msg) => {
             info!("Hit! Process execution error: {msg}");

@@ -51,13 +51,10 @@ fn run_child(child: &mut Child, timeout: Duration) -> Result<ExitStatus> {
 
 pub fn run_target_file(config: &Config, binary_args: &[String]) -> Result<ExitStatus> {
     let coalesced_args = binary_args.join(" ");
-    debug!(
-        "Running: {coalesced_args} on {}",
-        config.run_details.bin_path
-    );
+    debug!("Running: {coalesced_args} on {}", config.bin_path);
 
-    let timeout = Duration::from_millis(config.run_details.timeout);
-    let mut child = Command::new(&config.run_details.bin_path)
+    let timeout = Duration::from_millis(config.timeout);
+    let mut child = Command::new(&config.bin_path)
         .args(binary_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -68,7 +65,7 @@ pub fn run_target_file(config: &Config, binary_args: &[String]) -> Result<ExitSt
 }
 
 pub fn run_target_string(config: &Config, fuzz_input: &[u8]) -> Result<ExitStatus> {
-    let mut input_args = config.run_details.bin_args.clone();
+    let mut input_args = config.bin_args.clone();
     let fuzz_string_delim: &[String] = &fuzz_input
         .split(|&b| b == b' ') // use a space to delimit the args
         .map(|s| String::from_utf8_lossy(s).into_owned())
@@ -84,8 +81,8 @@ pub fn run_target_string(config: &Config, fuzz_input: &[u8]) -> Result<ExitStatu
         debug!("Running: {coalesced_args}");
     }
 
-    let timeout = Duration::from_millis(config.run_details.timeout);
-    let mut child = Command::new(&config.run_details.bin_path)
+    let timeout = Duration::from_millis(config.timeout);
+    let mut child = Command::new(&config.bin_path)
         .args(input_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

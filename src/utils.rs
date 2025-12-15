@@ -77,7 +77,7 @@ pub fn initialize_dirs(fuzz_type: &FuzzType) -> Result<()> {
 }
 
 pub fn create_report_json(config: &Config) -> Result<()> {
-    let report_json = serde_json::to_string(&config.run_details)?;
+    let report_json = serde_json::to_string(&config)?;
     fs::write(config.report_path.clone() + "/report.json", report_json)?;
     Ok(())
 }

@@ -2,7 +2,7 @@
 
 binary_path="/usr/local/bin/magick"
 fuzz_type="jpg"
-args="temp/mutated.jpg -verbose -encipher hi.txt temp/enciphered.jpg"
+args="temp/mutated.jpg -verbose -decipher temp mutated.jpg temp/deciphered.jpg"
 max_iterations="100"
 timeout="5000"
 

@@ -277,15 +277,15 @@ pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
         .collect();
 
     let mutated_file_path = "temp/mutated.jpg";
-    let args: Vec<String> = if config.run_details.bin_args == [""] {
+    let args: Vec<String> = if config.bin_args == [""] {
         vec![mutated_file_path.to_string()]
     } else {
-        let mut v = config.run_details.bin_args.clone();
+        let mut v = config.bin_args.clone();
         v.push(mutated_file_path.to_string());
         v
     };
 
-    for id in 0..config.run_details.max_iterations {
+    for id in 0..config.iterations {
         let file_num = config.rng.random_range(0..jpgs.len());
         let file = &jpgs[file_num];
         mutate_jpeg(&mut config.rng, file)?;
@@ -295,7 +295,7 @@ pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
             StructuredInput::FileInput(mutated_file_path.to_string(), "jpg".to_string());
         analyze_result(
             &config.report_path,
-            &mut config.run_details,
+            &mut config.crash_stats,
             result,
             id,
             structured_input,
