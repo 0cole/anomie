@@ -51,7 +51,7 @@ pub fn fuzz_txt(config: &mut Config) -> Result<()> {
 
         // apply mutations to file
         let mut bytes = fs::read(file)?;
-        mutate_bytes(&mut bytes);
+        mutate_bytes(&mut config.rng, &mut bytes);
         fs::write(mutated_file_path, &bytes)?;
 
         // TODO add arg functionality

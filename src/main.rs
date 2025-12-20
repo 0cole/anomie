@@ -1,11 +1,15 @@
 use anyhow::Result;
 use clap::Parser;
+use engine::Engine;
+use formats::{jpeg::Jpeg, string::FuzzString, txt::Txt};
 use log::{error, info};
+use types::FuzzType;
 
 mod analysis;
 mod config;
 mod engine;
 mod errors;
+mod formats;
 mod fuzzers;
 mod mutate;
 mod target;
@@ -28,7 +32,23 @@ fn main() -> Result<()> {
             info!("Parsed config successfully");
             utils::initialize_dirs(&config.validated_fuzz_type)?;
             utils::create_report_dir(&mut config)?;
-            engine::run(&mut config)?;
+
+            match config.validated_fuzz_type {
+                FuzzType::Txt => {
+                    let mut engine = Engine::<Txt>::new(&mut config);
+                    engine.run()?;
+                }
+                FuzzType::Jpeg => {
+                    let mut engine = Engine::<Jpeg>::new(&mut config);
+                    engine.run()?;
+                }
+                FuzzType::String => {
+                    let mut engine = Engine::<FuzzString>::new(&mut config);
+                    engine.run()?;
+                }
+                _ => error!("Unsupported fuzz type"),
+            }
+
             utils::create_report_json(&config)?;
             utils::clean_up(&config.validated_fuzz_type)?;
         }

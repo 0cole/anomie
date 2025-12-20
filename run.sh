@@ -1,8 +1,8 @@
 #!/bin/bash
 
-binary_path="/usr/local/bin/magick"
-fuzz_type="jpg"
-args="temp/mutated.jpg -verbose -decipher temp mutated.jpg temp/deciphered.jpg"
+binary_path="/usr/bin/textutil"
+fuzz_type="txt"
+args="-convert html temp/mutated.txt"
 max_iterations="100"
 timeout="5000"
 

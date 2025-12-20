@@ -1,7 +1,7 @@
 use anyhow::Result;
 use log::{debug, info};
 use std::{
-    fs,
+    fs::{self, DirEntry},
     path::{Path, PathBuf},
 };
 
@@ -63,9 +63,8 @@ pub fn initialize_dirs(fuzz_type: &FuzzType) -> Result<()> {
     let temp_dir = "temp";
     if Path::new(temp_dir).exists() {
         fs::remove_dir_all(temp_dir)?;
-    } else {
-        fs::create_dir(temp_dir)?;
     }
+    fs::create_dir(temp_dir)?;
 
     fs::create_dir_all("corpus")?;
     if !extension.is_empty() {
@@ -74,6 +73,24 @@ pub fn initialize_dirs(fuzz_type: &FuzzType) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn filename_bytes(entry: &DirEntry) -> Vec<u8> {
+    // weird behavior
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        return entry.file_name().as_os_str().as_bytes().to_vec();
+    }
+
+    #[cfg(not(unix))]
+    {
+        return entry
+            .file_name()
+            .to_string_lossy()
+            .into_owned()
+            .into_bytes();
+    }
 }
 
 pub fn create_report_json(config: &Config) -> Result<()> {

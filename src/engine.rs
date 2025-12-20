@@ -1,16 +1,85 @@
+use std::fs::{self, read_dir};
+use std::marker::PhantomData;
+
 use anyhow::Result;
-use log::error;
+use log::{debug, info};
+use rand::Rng;
 
-use crate::fuzzers;
-use crate::types::{Config, FuzzType};
+use crate::analysis::analyze_result;
+use crate::errors::ExitStatus;
+use crate::formats::template::FileFormat;
+use crate::target::{run_target_file, run_target_string};
+use crate::types::{Config, FuzzType, StructuredInput};
+use crate::utils::filename_bytes;
 
-pub fn run(config: &mut Config) -> Result<()> {
-    match config.validated_fuzz_type {
-        FuzzType::String => fuzzers::string::fuzz_string(config)?,
-        FuzzType::Txt => fuzzers::txt::fuzz_txt(config)?,
-        FuzzType::Jpeg => fuzzers::jpeg::fuzz_jpeg(config)?,
-        _ => error!("Unsupported fuzzing type"),
+pub struct Engine<'a, F: FileFormat> {
+    config: &'a mut Config,
+    _marker: PhantomData<F>,
+}
+
+impl<'a, F: FileFormat> Engine<'a, F> {
+    pub fn new(config: &'a mut Config) -> Self {
+        Self {
+            config,
+            _marker: std::marker::PhantomData,
+        }
     }
 
-    Ok(())
+    pub fn run(&mut self) -> Result<()> {
+        info!("Beginning fuzzing...");
+        let corpus_dir = format!("corpus/{}/", F::EXT);
+        F::generate_corpus(&mut self.config.rng, &corpus_dir)?;
+
+        let corpus: Vec<_> = read_dir(&corpus_dir)?.filter_map(Result::ok).collect();
+        let corpus_size = corpus.len();
+
+        for i in 0..self.config.iterations {
+            let rand_idx = self.config.rng.random_range(0..corpus_size);
+            let random_file = &corpus[rand_idx];
+
+            let content: &[u8] = match self.config.validated_fuzz_type {
+                FuzzType::String => &filename_bytes(random_file),
+                FuzzType::Txt | FuzzType::Jpeg => &fs::read(random_file.path())?,
+                _ => unreachable!(),
+            };
+
+            // mutate input
+            let mut mutation_array: Vec<String> = Vec::new();
+            let mutation_count = self.config.rng.random_range(0..5);
+            let mut model: F::Model = F::parse(content)?;
+            for _ in 0..mutation_count {
+                let mutation_string = F::mutate(&mut self.config.rng, &mut model)?;
+                debug!("{mutation_string}");
+                mutation_array.push(mutation_string);
+            }
+
+            let mutated_bytes = F::generate(model)?;
+
+            let (structured_input, result) = match self.config.validated_fuzz_type {
+                FuzzType::String => (
+                    StructuredInput::StringInput(mutated_bytes),
+                    run_target_string(self.config, content).unwrap_or(ExitStatus::ExitCode(0)),
+                ),
+                FuzzType::Txt | FuzzType::Jpeg => {
+                    let path = format!("temp/mutated.{}", F::EXT);
+                    fs::write(&path, mutated_bytes)?;
+                    (
+                        StructuredInput::FileInput(path, F::EXT.to_string()),
+                        run_target_file(self.config, &self.config.bin_args)
+                            .unwrap_or(ExitStatus::ExitCode(0)),
+                    )
+                }
+                _ => unreachable!(),
+            };
+
+            analyze_result(
+                &self.config.report_path,
+                &mut self.config.crash_stats,
+                result,
+                i,
+                structured_input,
+            )?;
+        }
+        Ok(())
+    }
 }
