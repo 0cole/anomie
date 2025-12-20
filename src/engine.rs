@@ -57,8 +57,9 @@ impl<'a, F: FileFormat> Engine<'a, F> {
 
             let (structured_input, result) = match self.config.validated_fuzz_type {
                 FuzzType::String => (
-                    StructuredInput::StringInput(mutated_bytes),
-                    run_target_string(self.config, content).unwrap_or(ExitStatus::ExitCode(0)),
+                    StructuredInput::StringInput(mutated_bytes.clone()),
+                    run_target_string(self.config, &mutated_bytes)
+                        .unwrap_or(ExitStatus::ExitCode(0)),
                 ),
                 FuzzType::Txt | FuzzType::Jpeg => {
                     let path = format!("temp/mutated.{}", F::EXT);
