@@ -83,10 +83,3 @@ pub fn create_report_json(config: &Config) -> Result<()> {
     fs::write(config.report_path.clone() + "/report.json", report_json)?;
     Ok(())
 }
-
-pub fn clean_up(config: &Config) {
-    drop(&config.temp_dir);
-    // as temp_dir goes out of scope, tempfile library handles deletion?
-    // config.temp_dir.close()?;
-    drop(config);
-}

@@ -10,7 +10,6 @@ mod config;
 mod engine;
 mod errors;
 mod formats;
-mod fuzzers;
 mod mutate;
 mod target;
 mod types;
@@ -49,7 +48,7 @@ fn main() -> Result<()> {
             }
 
             utils::create_report_json(&config)?;
-            utils::clean_up(&config);
+            // cleanup is handled automatically since we use a tempdir
         }
         Err(err) => {
             error!("Error when parsing config: {err}");

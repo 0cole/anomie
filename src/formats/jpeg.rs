@@ -26,7 +26,7 @@ impl FileFormat for Jpeg {
     type Model = JpegModel;
     const EXT: &str = "jpg";
 
-    #[allow(clippy::too_many_lines)]
+    #[allow(clippy::too_many_lines, unused_assignments)]
     fn parse(input: &[u8]) -> Result<Self::Model> {
         let mut segments = Vec::new();
         let mut i = 0;
