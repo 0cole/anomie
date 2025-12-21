@@ -1,7 +1,7 @@
 use anyhow::Result;
 use log::info;
 use rand::{Rng, rngs::SmallRng};
-use std::{fs, io::Write};
+use std::{fs, io::Write, path::PathBuf};
 
 use crate::{
     analysis::analyze_result,
@@ -50,15 +50,17 @@ pub fn fuzz_txt(config: &mut Config) -> Result<()> {
         let file = format!("{corpus_txt_dir}/{file_num}.txt");
 
         // apply mutations to file
-        let mut bytes = fs::read(file)?;
+        let mut bytes = fs::read(&file)?;
         mutate_bytes(&mut config.rng, &mut bytes);
         fs::write(mutated_file_path, &bytes)?;
 
         // TODO add arg functionality
-        let result =
-            run_target_file(config, &bin_args_plus_file).unwrap_or(ExitStatus::ExitCode(0));
-        let structured_input =
-            StructuredInput::FileInput(mutated_file_path.to_string(), "txt".to_string());
+        let result = run_target_file(config, &file).unwrap_or(ExitStatus::ExitCode(0));
+        let structured_input = StructuredInput::FileInput {
+            path: PathBuf::from(&mutated_file_path),
+            extension: "txt".to_string(),
+        };
+
         analyze_result(
             &config.report_path,
             &mut config.crash_stats,

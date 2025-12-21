@@ -290,9 +290,14 @@ pub fn fuzz_jpeg(config: &mut Config) -> Result<()> {
         let file = &jpgs[file_num];
         mutate_jpeg(&mut config.rng, file)?;
 
-        let result = run_target_file(config, &args).unwrap_or(ExitStatus::ExitCode(0));
-        let structured_input =
-            StructuredInput::FileInput(mutated_file_path.to_string(), "jpg".to_string());
+        let result = run_target_file(config, &file.to_string_lossy().into_owned())
+            .unwrap_or(ExitStatus::ExitCode(0));
+
+        let structured_input = StructuredInput::FileInput {
+            path: PathBuf::from(&mutated_file_path),
+            extension: "jpg".to_string(),
+        };
+
         analyze_result(
             &config.report_path,
             &mut config.crash_stats,

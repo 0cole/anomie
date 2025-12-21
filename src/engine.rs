@@ -1,4 +1,5 @@
-use std::fs::{self, read_dir};
+use std::fs::{self, File, read_dir};
+use std::io::Write;
 use std::marker::PhantomData;
 
 use anyhow::Result;
@@ -27,7 +28,9 @@ impl<'a, F: FileFormat> Engine<'a, F> {
 
     pub fn run(&mut self) -> Result<()> {
         info!("Beginning fuzzing...");
-        let corpus_dir = format!("corpus/{}/", F::EXT);
+
+        let corpus_dir = self.config.temp_dir.path().join("corpus");
+        let mutations_dir = self.config.temp_dir.path().join("mutations");
         F::generate_corpus(&mut self.config.rng, &corpus_dir)?;
 
         let corpus: Vec<_> = read_dir(&corpus_dir)?.filter_map(Result::ok).collect();
@@ -56,20 +59,25 @@ impl<'a, F: FileFormat> Engine<'a, F> {
             let mutated_bytes = F::generate(model)?;
 
             let (structured_input, result) = match self.config.validated_fuzz_type {
+                FuzzType::Txt | FuzzType::Jpeg => {
+                    let mutated_file_name = format!("{i}.{}", F::EXT);
+                    let mut mutated_file = File::create(mutations_dir.join(&mutated_file_name))?;
+                    mutated_file.write_all(&mutated_bytes)?;
+                    (
+                        StructuredInput::FileInput {
+                            path: mutations_dir.join(&mutated_file_name),
+                            extension: F::EXT.to_string(),
+                        },
+                        run_target_file(self.config, mutated_file_name.as_str())
+                            .unwrap_or(ExitStatus::ExitCode(0)),
+                    )
+                }
+                // unique handling for fuzzing the filename itself
                 FuzzType::String => (
                     StructuredInput::StringInput(mutated_bytes.clone()),
                     run_target_string(self.config, &mutated_bytes)
                         .unwrap_or(ExitStatus::ExitCode(0)),
                 ),
-                FuzzType::Txt | FuzzType::Jpeg => {
-                    let path = format!("temp/mutated.{}", F::EXT);
-                    fs::write(&path, mutated_bytes)?;
-                    (
-                        StructuredInput::FileInput(path, F::EXT.to_string()),
-                        run_target_file(self.config, &self.config.bin_args)
-                            .unwrap_or(ExitStatus::ExitCode(0)),
-                    )
-                }
                 _ => unreachable!(),
             };
 

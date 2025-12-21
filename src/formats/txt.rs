@@ -2,7 +2,7 @@ use super::template::FileFormat;
 use crate::mutate::mutate_bytes;
 use anyhow::Result;
 use rand::{Rng, rngs::SmallRng};
-use std::{fs, io::Write};
+use std::{fs, io::Write, path::Path};
 
 pub struct Txt;
 pub struct TxtModel {
@@ -23,7 +23,7 @@ impl FileFormat for Txt {
         Ok(model.bytes)
     }
 
-    fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()> {
+    fn generate_corpus(rng: &mut SmallRng, corpus_dir: &Path) -> Result<()> {
         // create 20 randomly generated txt files
         for i in 0..20 {
             let mut content = Vec::new();
@@ -32,8 +32,8 @@ impl FileFormat for Txt {
                 content.push(rng.random::<u8>());
             }
 
-            let filename = format!("{corpus_dir}/{i}.txt");
-            let mut file = fs::File::create(&filename)?;
+            let file_name = format!("{i}.txt");
+            let mut file = fs::File::create(corpus_dir.join(file_name))?;
             file.write_all(&content)?;
         }
         Ok(())

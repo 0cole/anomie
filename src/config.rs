@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use rand::{SeedableRng, rngs::SmallRng};
 use std::fs;
+use tempfile::tempdir;
 
 use crate::types::{Config, CrashStats, FuzzType};
 
@@ -72,6 +73,12 @@ impl RawConfig {
             sigterm: 0,
         };
 
+        let temp_dir = tempdir().map_err(|_| "can't create tempdir")?;
+        // let mutations_dir =
+        //     tempdir_in(&temp_dir).map_err(|_| "can't create temporary directory for mutations")?;
+        // let corpus_dir =
+        //     tempdir_in(temp_dir).map_err(|_| "can't create temporary directory for corpus")?;
+
         Ok(Config {
             bin_args: bin_args.clone(),
             bin_path: self.bin_path.clone(),
@@ -79,6 +86,7 @@ impl RawConfig {
             iterations: self.max_iterations,
             report_path: self.report_path.clone(),
             rng,
+            temp_dir,
             timeout: self.timeout,
             validated_fuzz_type: validated_fuzz_type.clone(),
         })

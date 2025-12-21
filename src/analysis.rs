@@ -1,6 +1,9 @@
 use anyhow::Result;
 use log::{debug, info};
-use std::{fs, io::Read};
+use std::{
+    fs::{self, remove_file},
+    io::Read,
+};
 
 use crate::{
     errors::{self, ExitStatus},
@@ -19,12 +22,12 @@ fn save_crash(
             debug!("Recording string-based crash at {path:?}");
             fs::write(path, bytes)?;
         }
-        StructuredInput::FileInput(file_path, ext) => {
-            let output_path = format!("{report_path}/{crash_type}/crash-{crash_id}.{ext}");
+        StructuredInput::FileInput { path, extension } => {
+            let output_path = format!("{report_path}/{crash_type}/crash-{crash_id}.{extension}");
             debug!("Recording file-based crash at {output_path:?}");
 
             let mut contents = Vec::new();
-            fs::File::open(&file_path)?.read_to_end(&mut contents)?;
+            fs::File::open(path)?.read_to_end(&mut contents)?;
             fs::write(output_path, contents)?;
         }
     }
@@ -41,6 +44,13 @@ pub fn analyze_result(
     match result {
         ExitStatus::ExitCode(code) => {
             debug!("Process exited gracefully with code {code}");
+            if let StructuredInput::FileInput { path, .. } = input {
+                debug!(
+                    "no crashes occurred, removing {}",
+                    path.as_path().to_string_lossy().into_owned()
+                );
+                remove_file(&path)?;
+            }
         }
         ExitStatus::Signal(sig) => {
             let (signal_desc, signal) = match sig {

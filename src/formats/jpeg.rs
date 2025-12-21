@@ -2,7 +2,7 @@ use super::template::FileFormat;
 use crate::mutate::mutate_bytes;
 use anyhow::Result;
 use rand::{Rng, rngs::SmallRng};
-use std::collections::HashSet;
+use std::{collections::HashSet, path::Path};
 
 pub struct Jpeg;
 #[derive(Clone)]
@@ -117,7 +117,8 @@ impl FileFormat for Jpeg {
                     break;
                 }
                 _ => {
-                    unimplemented!()
+                    i += 1;
+                    continue;
                 }
             }
 
@@ -201,7 +202,7 @@ impl FileFormat for Jpeg {
         clippy::cast_precision_loss,
         clippy::cast_sign_loss
     )]
-    fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()> {
+    fn generate_corpus(rng: &mut SmallRng, corpus_dir: &Path) -> Result<()> {
         // create a default 16x16 jpg
         let width: u16 = 16;
         let height: u16 = 16;
@@ -214,7 +215,7 @@ impl FileFormat for Jpeg {
             *pixel = image::Rgb([red, green, blue]);
         }
 
-        default_img.save(corpus_dir.to_string() + "default.jpg")?;
+        default_img.save(corpus_dir.join("default.jpg"))?;
         let data = default_img.into_vec();
 
         // generate different qualities, densities, 3 byte/pixel color_types, and progressive encoding
@@ -235,10 +236,11 @@ impl FileFormat for Jpeg {
             };
 
             let file_name = format!(
-                "{corpus_dir}color-type={:?}_quality={quality}_progressive={progressive:?}_density={density:?}.jpg",
+                "color-type={:?}_quality={quality}_progressive={progressive:?}_density={density:?}.jpg",
                 color_types[color_type_index]
             );
-            let mut encoder = jpeg_encoder::Encoder::new_file(file_name, quality)?;
+
+            let mut encoder = jpeg_encoder::Encoder::new_file(corpus_dir.join(file_name), quality)?;
             encoder.set_progressive(progressive);
             encoder.set_density(density);
             encoder.encode(&data, width, height, color_types[color_type_index])?;
@@ -258,8 +260,8 @@ impl FileFormat for Jpeg {
             for (_, _, pixel) in img.enumerate_pixels_mut() {
                 *pixel = image::Rgb([rng.random::<u8>(), rng.random::<u8>(), rng.random::<u8>()]);
             }
-            let file_name = format!("{corpus_dir}size-{w}x{h}.jpg");
-            img.save(file_name)?;
+            let file_name = format!("size-{w}x{h}.jpg");
+            img.save(corpus_dir.join(file_name))?;
         }
 
         Ok(())

@@ -1,5 +1,8 @@
+use std::path::PathBuf;
+
 use rand::rngs::SmallRng;
 use serde::Serialize;
+use tempfile::TempDir;
 
 // Fuzzer global config, this is the struct used after input validation
 // (eg. verifying the binary exists, making sure the FuzzType is valid)
@@ -15,6 +18,8 @@ pub struct Config {
 
     #[serde(skip)]
     pub rng: SmallRng, // skip this when serializing
+    #[serde(skip)]
+    pub temp_dir: TempDir, // mutations/corpus are stored here
 
     pub timeout: u64,
     pub validated_fuzz_type: FuzzType,
@@ -50,6 +55,6 @@ pub enum FuzzType {
 // analysis section where I save the specific string/file that
 // caused a crash.
 pub enum StructuredInput {
-    StringInput(Vec<u8>),      // Contains an array of bytes that caused the crash
-    FileInput(String, String), // Contains the file path and the extension used
+    StringInput(Vec<u8>), // Contains an array of bytes that caused the crash
+    FileInput { path: PathBuf, extension: String },
 }

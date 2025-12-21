@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use log::debug;
 use std::{
     io::Read,
@@ -49,9 +49,32 @@ fn run_child(child: &mut Child, timeout: Duration) -> Result<ExitStatus> {
     }
 }
 
-pub fn run_target_file(config: &Config, binary_args: &[String]) -> Result<ExitStatus> {
-    let coalesced_args = binary_args.join(" ");
-    debug!("Running: {coalesced_args} on {}", config.bin_path);
+pub fn run_target_file(config: &Config, mutated_file_name: &str) -> Result<ExitStatus> {
+    let mut binary_args = config.bin_args.clone();
+
+    let mutated_file_path = config
+        .temp_dir
+        .path()
+        .join("mutations")
+        .join(mutated_file_name);
+
+    let mut replaced = false;
+    for arg in &mut binary_args {
+        if arg == "{input}" {
+            *arg = mutated_file_path.to_string_lossy().into_owned();
+            replaced = true;
+        } else if arg.contains("{temp_dir}") {
+            if let Some(path) = config.temp_dir.path().to_str() {
+                *arg = arg.replace("{temp_dir}", path);
+            }
+        }
+    }
+
+    if !replaced {
+        bail!("Binary args missing {{input}} placeholder");
+    }
+
+    debug!("Running: {:?} {:?}", config.bin_path, binary_args.join(" "));
 
     let timeout = Duration::from_millis(config.timeout);
     let mut child = Command::new(&config.bin_path)
@@ -59,7 +82,6 @@ pub fn run_target_file(config: &Config, binary_args: &[String]) -> Result<ExitSt
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-
     let exit_status = run_child(&mut child, timeout)?;
     Ok(exit_status)
 }

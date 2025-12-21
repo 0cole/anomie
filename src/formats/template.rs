@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Result;
 use rand::rngs::SmallRng;
 
@@ -12,7 +14,7 @@ pub trait FileFormat {
     fn generate(model: Self::Model) -> Result<Vec<u8>>;
 
     // generate a corpus
-    fn generate_corpus(rng: &mut SmallRng, corpus_dir: &str) -> Result<()>;
+    fn generate_corpus(rng: &mut SmallRng, corpus_dir: &Path) -> Result<()>;
 
     // apply mutations to a model
     fn mutate(rng: &mut SmallRng, model: &mut Self::Model) -> Result<String>;

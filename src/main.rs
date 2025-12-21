@@ -30,8 +30,7 @@ fn main() -> Result<()> {
     match config::RawConfig::parse().validate() {
         Ok(mut config) => {
             info!("Parsed config successfully");
-            utils::initialize_dirs(&config.validated_fuzz_type)?;
-            utils::create_report_dir(&mut config)?;
+            utils::initialize(&mut config)?;
 
             match config.validated_fuzz_type {
                 FuzzType::Txt => {
@@ -50,7 +49,7 @@ fn main() -> Result<()> {
             }
 
             utils::create_report_json(&config)?;
-            utils::clean_up(&config.validated_fuzz_type)?;
+            utils::clean_up(&config);
         }
         Err(err) => {
             error!("Error when parsing config: {err}");

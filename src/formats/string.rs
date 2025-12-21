@@ -1,4 +1,4 @@
-use std::{fs, io::Write};
+use std::{fs, io::Write, path::Path};
 
 use anyhow::Result;
 use rand::rngs::SmallRng;
@@ -26,7 +26,7 @@ impl FileFormat for FuzzString {
         Ok(model.filename)
     }
 
-    fn generate_corpus(rng: &mut rand::prelude::SmallRng, corpus_dir: &str) -> Result<()> {
+    fn generate_corpus(_rng: &mut rand::prelude::SmallRng, corpus_dir: &Path) -> Result<()> {
         let filenames = vec![
             "My name is Cole.".to_string(),
             String::new(),
@@ -39,8 +39,7 @@ impl FileFormat for FuzzString {
         ];
 
         for filename in filenames {
-            let filepath = format!("{corpus_dir}/{filename}.txt");
-            let mut file = fs::File::create(&filepath)?;
+            let mut file = fs::File::create(corpus_dir.join(filename))?;
             file.write_all(b"\x12")?;
         }
 
