@@ -9,7 +9,7 @@ fuzz_type="jpg"
 #   note that there is a scratch dir there to store output files, to write to it,
 #   use `{temp_dir}/scratch`
 args="{input} {temp_dir}/scratch/out.png"
-max_iterations="100"
+max_iterations="50"
 timeout="5000"
 
 if [ -z "$1" ]; then

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use log::{debug, info};
 use std::{
+    fmt::Write,
     fs::{self, DirEntry, create_dir},
     path::Path,
 };
@@ -81,5 +82,31 @@ pub fn filename_bytes(entry: &DirEntry) -> Vec<u8> {
 pub fn create_report_json(config: &Config) -> Result<()> {
     let report_json = serde_json::to_string(&config)?;
     fs::write(config.report_path.clone() + "/report.json", report_json)?;
+    Ok(())
+}
+
+pub fn print_report(config: &Config) -> Result<()> {
+    let crash_stats = &config.crash_stats;
+    let mut s = String::new();
+
+    // writeln!(&mut s, "")?;
+    writeln!(&mut s, "\n=====END OF RUN STATS=====")?;
+    writeln!(
+        &mut s,
+        "report can be found at \n  `{}`",
+        config.report_path
+    )?;
+    writeln!(&mut s, "total hits:   {}", crash_stats.total)?;
+    writeln!(&mut s, "sigill hits:  {}", crash_stats.sigill)?;
+    writeln!(&mut s, "sigabrt hits: {}", crash_stats.sigabrt)?;
+    writeln!(&mut s, "sigfpe hits:  {}", crash_stats.sigfpe)?;
+    writeln!(&mut s, "sigsegv hits: {}", crash_stats.sigsegv)?;
+    writeln!(&mut s, "sigpipe hits: {}", crash_stats.sigpipe)?;
+    writeln!(&mut s, "sigterm hits: {}", crash_stats.sigterm)?;
+    writeln!(&mut s, "timeouts:     {}", crash_stats.timeout)?;
+    write!(&mut s, "==========================")?;
+
+    info!("{s}");
+
     Ok(())
 }

@@ -48,6 +48,7 @@ fn main() -> Result<()> {
             }
 
             utils::create_report_json(&config)?;
+            utils::print_report(&config)?;
             // cleanup is handled automatically since we use a tempdir
         }
         Err(err) => {
