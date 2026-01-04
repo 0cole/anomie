@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::types::Config;
+use crate::{analysis::CrashAnalyzer, types::Config};
 
 pub fn initialize(config: &mut Config) -> Result<()> {
     // create the temporary directories that will be dropped when the fuzzer finishes
@@ -79,14 +79,17 @@ pub fn filename_bytes(entry: &DirEntry) -> Vec<u8> {
     }
 }
 
-pub fn create_report_json(config: &Config) -> Result<()> {
-    let report_json = serde_json::to_string(&config)?;
-    fs::write(config.report_path.clone() + "/report.json", report_json)?;
+pub fn create_run_json(analyzer: &CrashAnalyzer, config: &Config) -> Result<()> {
+    let config_json = serde_json::to_string(&config)?;
+    fs::write(config.report_path.clone() + "/config.json", config_json)?;
+
+    let crashes_json = serde_json::to_string(&analyzer)?;
+    fs::write(config.report_path.clone() + "/crashes.json", crashes_json)?;
     Ok(())
 }
 
-pub fn print_report(config: &Config) -> Result<()> {
-    let crash_stats = &config.crash_stats;
+pub fn print_report(analyzer: &CrashAnalyzer, config: &Config) -> Result<()> {
+    let crash_stats = &analyzer.stats;
     let mut s = String::new();
 
     // writeln!(&mut s, "")?;

@@ -4,7 +4,7 @@ use rand::{SeedableRng, rngs::SmallRng};
 use std::fs;
 use tempfile::tempdir;
 
-use crate::types::{Config, CrashStats, FuzzType};
+use crate::types::{Config, FuzzType};
 
 #[derive(Parser, Debug)]
 pub struct RawConfig {
@@ -62,17 +62,6 @@ impl RawConfig {
         // parse the args and format them as a vector
         let bin_args: Vec<String> = self.bin_args.split(' ').map(String::from).collect();
 
-        let crash_stats = CrashStats {
-            total: 0,
-            timeout: 0,
-            sigill: 0,
-            sigabrt: 0,
-            sigfpe: 0,
-            sigsegv: 0,
-            sigpipe: 0,
-            sigterm: 0,
-        };
-
         let temp_dir = tempdir().map_err(|_| anyhow!("can't create tempdir"))?;
         // let mutations_dir =
         //     tempdir_in(&temp_dir).map_err(|_| "can't create temporary directory for mutations")?;
@@ -82,7 +71,6 @@ impl RawConfig {
         Ok(Config {
             bin_args: bin_args.clone(),
             bin_path: self.bin_path.clone(),
-            crash_stats,
             iterations: self.max_iterations,
             report_path: self.report_path.clone(),
             rng,

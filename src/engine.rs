@@ -6,7 +6,7 @@ use anyhow::Result;
 use log::{debug, info};
 use rand::Rng;
 
-use crate::analysis::analyze_result;
+use crate::analysis::CrashAnalyzer;
 use crate::errors::ExitStatus;
 use crate::formats::template::FileFormat;
 use crate::target::{run_target_file, run_target_string};
@@ -14,18 +14,23 @@ use crate::types::{Config, FuzzType, StructuredInput};
 use crate::utils::filename_bytes;
 
 pub struct Engine<'a, F: FileFormat> {
+    analyzer: &'a mut CrashAnalyzer,
     config: &'a mut Config,
     _marker: PhantomData<F>,
 }
 
-pub fn run_engine_for<T: FileFormat>(config: &mut Config) -> Result<()> {
-    let mut engine = Engine::<T>::new(config);
+pub fn run_engine_for<T: FileFormat>(
+    analyzer: &mut CrashAnalyzer,
+    config: &mut Config,
+) -> Result<()> {
+    let mut engine = Engine::<T>::new(analyzer, config);
     engine.run()
 }
 
 impl<'a, F: FileFormat> Engine<'a, F> {
-    pub fn new(config: &'a mut Config) -> Self {
+    pub fn new(analyzer: &'a mut CrashAnalyzer, config: &'a mut Config) -> Self {
         Self {
+            analyzer,
             config,
             _marker: std::marker::PhantomData,
         }
@@ -86,13 +91,8 @@ impl<'a, F: FileFormat> Engine<'a, F> {
                 _ => unreachable!(),
             };
 
-            analyze_result(
-                &self.config.report_path,
-                &mut self.config.crash_stats,
-                result,
-                i,
-                structured_input,
-            )?;
+            self.analyzer
+                .analyze(i, result, structured_input, mutation_array)?;
         }
         Ok(())
     }

@@ -12,7 +12,6 @@ use tempfile::TempDir;
 pub struct Config {
     pub bin_args: Vec<String>,
     pub bin_path: String,
-    pub crash_stats: CrashStats,
     pub iterations: usize,
     pub report_path: String,
 
