@@ -18,6 +18,11 @@ pub struct Engine<'a, F: FileFormat> {
     _marker: PhantomData<F>,
 }
 
+pub fn run_engine_for<T: FileFormat>(config: &mut Config) -> Result<()> {
+    let mut engine = Engine::<T>::new(config);
+    engine.run()
+}
+
 impl<'a, F: FileFormat> Engine<'a, F> {
     pub fn new(config: &'a mut Config) -> Self {
         Self {

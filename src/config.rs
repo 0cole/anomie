@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use rand::{SeedableRng, rngs::SmallRng};
 use std::fs;
@@ -32,12 +32,12 @@ pub struct RawConfig {
 }
 
 impl RawConfig {
-    pub fn validate(&self) -> Result<Config, &'static str> {
+    pub fn validate(&self) -> Result<Config, anyhow::Error> {
         // validate the binary passed in
         let metadata = fs::metadata(&self.bin_path)
-            .map_err(|_| "invalid binary path, double check the path exists")?;
+            .map_err(|_| anyhow!("invalid binary path, double check the path exists"))?;
         if !metadata.is_file() {
-            return Err("path does not correspond to a binary");
+            return Err(anyhow!("path does not correspond to a binary"));
         }
 
         // validate the type passed in
@@ -49,7 +49,7 @@ impl RawConfig {
             "jpeg" | "jpg" => FuzzType::Jpeg,
             "png" => FuzzType::Png,
             "pdf" => FuzzType::Pdf,
-            _ => return Err("invalid fuzz type"),
+            _ => return Err(anyhow!("invalid fuzz type")),
         };
 
         // initialize the rng if a seed is provided otherwise generate one from getrandom
@@ -73,7 +73,7 @@ impl RawConfig {
             sigterm: 0,
         };
 
-        let temp_dir = tempdir().map_err(|_| "can't create tempdir")?;
+        let temp_dir = tempdir().map_err(|_| anyhow!("can't create tempdir"))?;
         // let mutations_dir =
         //     tempdir_in(&temp_dir).map_err(|_| "can't create temporary directory for mutations")?;
         // let corpus_dir =

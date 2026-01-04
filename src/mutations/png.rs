@@ -1,6 +1,6 @@
 use rand::{Rng, seq::IndexedRandom};
 
-use crate::formats::png::{Chunk, PngModel, interpret_chunk};
+use crate::formats::png::{Chunk, PngModel};
 
 pub fn remove_ihdr(model: &mut PngModel) -> String {
     model.chunks.retain(|c| !matches!(c, Chunk::Ihdr(_)));
