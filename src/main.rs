@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use engine::Engine;
-use formats::{jpeg::Jpeg, string::FuzzString, txt::Txt};
+use formats::{jpeg::Jpeg, png::Png, string::FuzzString, txt::Txt};
 use log::{error, info};
 use types::FuzzType;
 
@@ -11,6 +11,7 @@ mod engine;
 mod errors;
 mod formats;
 mod mutate;
+mod mutations;
 mod target;
 mod types;
 mod utils;
@@ -38,6 +39,10 @@ fn main() -> Result<()> {
                 }
                 FuzzType::Jpeg => {
                     let mut engine = Engine::<Jpeg>::new(&mut config);
+                    engine.run()?;
+                }
+                FuzzType::Png => {
+                    let mut engine = Engine::<Png>::new(&mut config);
                     engine.run()?;
                 }
                 FuzzType::String => {

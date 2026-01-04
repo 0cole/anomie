@@ -42,7 +42,7 @@ impl<'a, F: FileFormat> Engine<'a, F> {
 
             let content: &[u8] = match self.config.validated_fuzz_type {
                 FuzzType::String => &filename_bytes(random_file),
-                FuzzType::Txt | FuzzType::Jpeg => &fs::read(random_file.path())?,
+                FuzzType::Txt | FuzzType::Jpeg | FuzzType::Png => &fs::read(random_file.path())?,
                 _ => unreachable!(),
             };
 
@@ -59,7 +59,7 @@ impl<'a, F: FileFormat> Engine<'a, F> {
             let mutated_bytes = F::generate(model)?;
 
             let (structured_input, result) = match self.config.validated_fuzz_type {
-                FuzzType::Txt | FuzzType::Jpeg => {
+                FuzzType::Txt | FuzzType::Jpeg | FuzzType::Png => {
                     let mutated_file_name = format!("{i}.{}", F::EXT);
                     let mut mutated_file = File::create(mutations_dir.join(&mutated_file_name))?;
                     mutated_file.write_all(&mutated_bytes)?;
