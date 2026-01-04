@@ -50,6 +50,7 @@ pub fn initialize(config: &mut Config) -> Result<()> {
     fs::create_dir(new_dir_path.clone() + "/SIGPIPE")?;
     fs::create_dir(new_dir_path.clone() + "/SIGTERM")?;
     fs::create_dir(new_dir_path.clone() + "/TIMEOUT")?;
+    fs::create_dir(new_dir_path.clone() + "/UNKNOWN")?;
 
     // update the subdir num in config
     info!(
@@ -107,6 +108,7 @@ pub fn print_report(analyzer: &CrashAnalyzer, config: &Config) -> Result<()> {
     writeln!(&mut s, "sigpipe hits: {}", crash_stats.sigpipe)?;
     writeln!(&mut s, "sigterm hits: {}", crash_stats.sigterm)?;
     writeln!(&mut s, "timeouts:     {}", crash_stats.timeout)?;
+    writeln!(&mut s, "unknown hits: {}", crash_stats.timeout)?;
     write!(&mut s, "==========================")?;
 
     info!("{s}");

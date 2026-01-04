@@ -102,10 +102,12 @@ impl CrashAnalyzer {
             ExitStatus::Timeout(limit) => {
                 self.stats.timeout += 1;
                 info!("Hit! Process timed out after exceeding {limit} ms");
+                name = "TIMEOUT";
                 crash_occurred = true;
             }
             ExitStatus::Error(msg) => {
                 info!("Hit! Process execution error: {msg}");
+                name = "UNKNOWN";
                 crash_occurred = true;
             }
         }

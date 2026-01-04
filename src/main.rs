@@ -30,10 +30,10 @@ fn main() {
 
 fn run() -> Result<()> {
     let mut config = config::RawConfig::parse().validate()?;
-    info!("Parsed config successfully");
-    let mut analyzer = analysis::CrashAnalyzer::new(PathBuf::from(&config.report_path));
-
     utils::initialize(&mut config)?;
+    let mut analyzer = analysis::CrashAnalyzer::new(PathBuf::from(&config.report_path));
+    info!("Parsed config and initialized analyzer successfully");
+
     run_engine(&mut analyzer, &mut config)?;
     utils::create_run_json(&analyzer, &config)?;
     utils::print_report(&analyzer, &config)?;
