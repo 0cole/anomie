@@ -24,9 +24,9 @@ const PNG_SIGNATURE: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Chunk {
-    Ihdr(Ihdr),
-    Idat(Vec<u8>),
-    Iend,
+    Ihdr(Ihdr, ChunkCrc),
+    Idat(Vec<u8>, ChunkCrc),
+    Iend(ChunkCrc),
     Ancillary(RawChunk),
 }
 
@@ -42,11 +42,16 @@ pub struct Ihdr {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub struct ChunkCrc {
+    pub crc: u32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct RawChunk {
-    length: u32,
-    chunk_type: [u8; 4],
-    data: Vec<u8>,
-    crc: u32,
+    pub length: u32,
+    pub chunk_type: [u8; 4],
+    pub data: Vec<u8>,
+    pub crc: u32,
 }
 
 // reads a chunk from a bytestream. parses it and returns a raw chunk.
@@ -119,22 +124,29 @@ fn minimal_idat(scanline: &[u8]) -> Result<Vec<u8>> {
 
 pub fn interpret_chunk(raw: RawChunk) -> Result<Chunk> {
     match &raw.chunk_type {
-        b"IHDR" => Ok(Chunk::Ihdr(bytes_to_ihdr(&raw.data)?)),
-        b"IDAT" => Ok(Chunk::Idat(raw.data)),
-        b"IEND" => Ok(Chunk::Iend),
+        b"IHDR" => Ok(Chunk::Ihdr(
+            bytes_to_ihdr(&raw.data)?,
+            ChunkCrc { crc: raw.crc },
+        )),
+        b"IDAT" => Ok(Chunk::Idat(raw.data, ChunkCrc { crc: raw.crc })),
+        b"IEND" => Ok(Chunk::Iend(ChunkCrc { crc: raw.crc })),
         _ => Ok(Chunk::Ancillary(raw)),
     }
 }
 
 // calculates the length and crc. extends byte_stream
-fn write_chunk(byte_stream: &mut Vec<u8>, ty: &[u8], data: &[u8]) {
+fn write_chunk(byte_stream: &mut Vec<u8>, ty: &[u8], data: &[u8], opt_crc: Option<u32>) {
     let len = u32::try_from(data.len()).unwrap();
     byte_stream.extend_from_slice(&len.to_be_bytes());
     byte_stream.extend_from_slice(ty);
     byte_stream.extend_from_slice(data);
 
-    let crc = png_crc(ty, data);
-    byte_stream.extend_from_slice(&crc.to_be_bytes());
+    if let Some(crc) = opt_crc {
+        byte_stream.extend_from_slice(&crc.to_be_bytes());
+    } else {
+        let crc = png_crc(ty, data);
+        byte_stream.extend_from_slice(&crc.to_be_bytes());
+    }
 }
 
 fn png_crc(ty: &[u8], data: &[u8]) -> u32 {
@@ -144,10 +156,30 @@ fn png_crc(ty: &[u8], data: &[u8]) -> u32 {
     hasher.finalize()
 }
 
-fn write_png(path: PathBuf, model: PngModel) -> Result<()> {
+fn write_png(path: PathBuf, mut model: PngModel, normalize: bool) -> Result<()> {
+    if normalize {
+        normalize_png(&mut model);
+    }
     let bytes = Png::generate(model)?;
     std::fs::write(path, &bytes)?;
     Ok(())
+}
+
+fn normalize_png(model: &mut PngModel) {
+    for chunk in &mut model.chunks {
+        let (ty, data, crc) = match chunk {
+            Chunk::Ihdr(data, crc) => (b"IHDR", &mut ihdr_to_bytes(data), crc),
+            Chunk::Idat(data, crc) => (b"IDAT", data, crc),
+            Chunk::Iend(crc) => (b"IEND", &mut [].to_vec(), crc),
+            Chunk::Ancillary(raw) => (
+                &raw.chunk_type,
+                &mut raw.data,
+                &mut ChunkCrc { crc: raw.crc },
+            ),
+        };
+
+        crc.crc = png_crc(ty, data);
+    }
 }
 
 impl FileFormat for Png {
@@ -180,10 +212,14 @@ impl FileFormat for Png {
 
         for chunk in &model.chunks {
             match chunk {
-                Chunk::Ihdr(data) => write_chunk(&mut bytes, b"IHDR", &ihdr_to_bytes(data)),
-                Chunk::Idat(data) => write_chunk(&mut bytes, b"IDAT", data),
-                Chunk::Iend => write_chunk(&mut bytes, b"IEND", &[0x00, 0x00, 0x00, 0x00]),
-                Chunk::Ancillary(raw) => write_chunk(&mut bytes, &raw.chunk_type, &raw.data),
+                Chunk::Ihdr(data, crc) => {
+                    write_chunk(&mut bytes, b"IHDR", &ihdr_to_bytes(data), Some(crc.crc));
+                }
+                Chunk::Idat(data, crc) => write_chunk(&mut bytes, b"IDAT", data, Some(crc.crc)),
+                Chunk::Iend(crc) => write_chunk(&mut bytes, b"IEND", &[], Some(crc.crc)),
+                Chunk::Ancillary(raw) => {
+                    write_chunk(&mut bytes, &raw.chunk_type, &raw.data, Some(raw.crc));
+                }
             }
         }
 
@@ -256,10 +292,10 @@ impl FileFormat for Png {
             model.chunks.push(interpret_chunk(idat_raw_chunk)?);
 
             // ==== add IEND ====
-            model.chunks.push(Chunk::Iend);
+            model.chunks.push(Chunk::Iend(ChunkCrc { crc: 0 }));
 
             let path = corpus_dir.join(format!("{name}.png"));
-            write_png(path, model)?;
+            write_png(path, model, true)?;
             debug!("created {name}.png");
         }
 
@@ -282,6 +318,8 @@ impl FileFormat for Png {
             6 => png_mutations::change_compression_method(model, rng),
             7 => png_mutations::change_filter_method(model, rng),
             8 => png_mutations::change_interlace_method(model, rng),
+            9 => png_mutations::xor_crc(model, rng),
+            10 => png_mutations::zero_crc(model, rng),
             _ => {
                 unreachable!()
             }

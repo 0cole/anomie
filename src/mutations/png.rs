@@ -1,19 +1,22 @@
-use rand::{Rng, seq::IndexedRandom};
+use rand::{
+    Rng,
+    seq::{IndexedMutRandom, IndexedRandom},
+};
 
 use crate::formats::png::{Chunk, PngModel};
 
 pub fn remove_ihdr(model: &mut PngModel) -> String {
-    model.chunks.retain(|c| !matches!(c, Chunk::Ihdr(_)));
+    model.chunks.retain(|c| !matches!(c, Chunk::Ihdr(..)));
     "removed ihdr".to_string()
 }
 
 pub fn remove_idat(model: &mut PngModel) -> String {
-    model.chunks.retain(|c| !matches!(c, Chunk::Idat(_)));
+    model.chunks.retain(|c| !matches!(c, Chunk::Idat(..)));
     "removed idat".to_string()
 }
 
 pub fn remove_iend(model: &mut PngModel) -> String {
-    model.chunks.retain(|c| c != &Chunk::Iend);
+    model.chunks.retain(|c| !matches!(c, Chunk::Iend(_)));
     "removed iend".to_string()
 }
 
@@ -52,7 +55,7 @@ pub fn change_png_dims(model: &mut PngModel, rng: &mut rand::prelude::SmallRng) 
 
     let mut changed = false;
     for chunk in &mut model.chunks {
-        if let Chunk::Ihdr(ihdr) = chunk {
+        if let Chunk::Ihdr(ihdr, _) = chunk {
             ihdr.width = *rand_width;
             ihdr.height = *rand_height;
             changed = true;
@@ -73,7 +76,7 @@ pub fn change_depth(model: &mut PngModel, rng: &mut rand::prelude::SmallRng) -> 
 
     let mut changed = false;
     for chunk in &mut model.chunks {
-        if let Chunk::Ihdr(ihdr) = chunk {
+        if let Chunk::Ihdr(ihdr, _) = chunk {
             ihdr.depth = *rand_depth;
             changed = true;
         }
@@ -93,7 +96,7 @@ pub fn change_color_type(model: &mut PngModel, rng: &mut rand::prelude::SmallRng
 
     let mut changed = false;
     for chunk in &mut model.chunks {
-        if let Chunk::Ihdr(ihdr) = chunk {
+        if let Chunk::Ihdr(ihdr, _) = chunk {
             ihdr.color_type = *rand_ctype;
             changed = true;
         }
@@ -114,7 +117,7 @@ pub fn change_compression_method(
     let rand_u8 = rng.random::<u8>();
     let mut changed = false;
     for chunk in &mut model.chunks {
-        if let Chunk::Ihdr(ihdr) = chunk {
+        if let Chunk::Ihdr(ihdr, _) = chunk {
             ihdr.color_type = rng.random::<u8>();
             changed = true;
         }
@@ -132,7 +135,7 @@ pub fn change_filter_method(model: &mut PngModel, rng: &mut rand::prelude::Small
     let rand_u8 = rng.random::<u8>();
     let mut changed = false;
     for chunk in &mut model.chunks {
-        if let Chunk::Ihdr(ihdr) = chunk {
+        if let Chunk::Ihdr(ihdr, _) = chunk {
             ihdr.filter_method = rng.random::<u8>();
             changed = true;
         }
@@ -152,7 +155,7 @@ pub fn change_interlace_method(model: &mut PngModel, rng: &mut rand::prelude::Sm
 
     let mut changed = false;
     for chunk in &mut model.chunks {
-        if let Chunk::Ihdr(ihdr) = chunk {
+        if let Chunk::Ihdr(ihdr, _) = chunk {
             ihdr.interlace_method = *rand_interlace_method;
             changed = true;
         }
@@ -163,4 +166,53 @@ pub fn change_interlace_method(model: &mut PngModel, rng: &mut rand::prelude::Sm
     } else {
         "could not find ihdr".to_string()
     }
+}
+
+pub fn xor_crc(model: &mut PngModel, rng: &mut rand::prelude::SmallRng) -> String {
+    let rand_pow = 1 << rng.random_range(0..32);
+    let chunk = model.chunks.choose_mut(rng).unwrap();
+    let chunk_type = match chunk {
+        Chunk::Ihdr(_, crc) => {
+            crc.crc ^= rand_pow;
+            "IHDR"
+        }
+        Chunk::Idat(_, crc) => {
+            crc.crc ^= rand_pow;
+            "IDAT"
+        }
+        Chunk::Iend(crc) => {
+            crc.crc ^= rand_pow;
+            "IEND"
+        }
+        Chunk::Ancillary(raw) => {
+            raw.crc ^= rand_pow;
+            &String::from_utf8(raw.chunk_type.to_vec()).unwrap()
+        }
+    };
+
+    format!("XOR crc of {chunk_type} by {rand_pow}")
+}
+
+pub fn zero_crc(model: &mut PngModel, rng: &mut rand::prelude::SmallRng) -> String {
+    let chunk = model.chunks.choose_mut(rng).unwrap();
+    let chunk_type = match chunk {
+        Chunk::Ihdr(_, crc) => {
+            crc.crc = 0;
+            "IHDR"
+        }
+        Chunk::Idat(_, crc) => {
+            crc.crc = 0;
+            "IDAT"
+        }
+        Chunk::Iend(crc) => {
+            crc.crc = 0;
+            "IEND"
+        }
+        Chunk::Ancillary(raw) => {
+            raw.crc = 0;
+            &String::from_utf8(raw.chunk_type.to_vec()).unwrap()
+        }
+    };
+
+    format!("zeroed the crc of {chunk_type}")
 }
